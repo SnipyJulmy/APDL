@@ -1,13 +1,12 @@
 package apdl.core
 
-import java.io.{File, PrintWriter}
+import apdl.ApdlOutputStream._
+import apdl.Utils._
 
 import scala.language.implicitConversions
 import scala.lms.common._
 import scala.lms.internal.GenericNestedCodegen
 import scala.reflect.SourceContext
-
-import apdl.Utils._
 
 /**
   * Created by snipy
@@ -24,8 +23,8 @@ trait Arduino extends Base with PrimitiveOps with Functions {
   def macAddress(address: Seq[Byte])(implicit pos: SourceContext): Rep[Unit]
   def ipAddress(address: Seq[Int])(implicit pos: SourceContext): Rep[Unit]
   def serverAddress(address: Seq[Int])(implicit pos: SourceContext): Rep[Unit]
+
   // TODO : abstraction !
-  // def arduinoConfig(mac : Seq[Byte], ip : Seq[Int], server : Seq[Int]) : Rep[Unit]
   def serverPort(port: Int)(implicit pos: SourceContext): Rep[Unit]
   def bufferSize(size: Int)(implicit pos: SourceContext): Rep[Unit]
 
@@ -92,7 +91,6 @@ trait BaseGenArduino extends GenericNestedCodegen {
 }
 
 trait CGenArduino extends CGenEffect with BaseGenArduino {
-  val ApdlHeaderStream = new PrintWriter(new File("apdl-gen.h"))
   val IR: ArduinoExp
 
   import IR._
@@ -100,21 +98,37 @@ trait CGenArduino extends CGenEffect with BaseGenArduino {
   override def emitNode(sym: Sym[Any], rhs: Def[Any]): Unit = rhs match {
     case AnalogInput(pin) => emitValDef(sym, s"analogRead($pin)")
     case DigitalInput(pin) => emitValDef(sym, s"digitalRead($pin)")
-    case ApplyTransform(f, arg) =>
-      emitValDef(sym, quote(f) + "(" + quote(arg) + ")")
+    case ApplyTransform(fun, arg) =>
+      emitValDef(sym, quote(fun) + "(" + quote(arg) + ")")
     //noinspection ZeroIndexToHead
     case MacAddress(address) =>
-      ApdlHeaderStream.append(s"byte mac[] = {" +
+      headerPrintln(s"byte mac[] = {" +
         s"${address(0).cHex}," +
         s"${address(1).cHex}," +
         s"${address(2).cHex}," +
         s"${address(3).cHex}," +
         s"${address(4).cHex}," +
-        s"${address(5).cHex}};").flush()
+        s"${address(5).cHex}};\n")
+    //noinspection ZeroIndexToHead
     case IpAddress(address) =>
+      headerPrintln(s"IPAddress ip(" +
+        s"${address(0)}," +
+        s"${address(1)}," +
+        s"${address(2)}," +
+        s"${address(3)}" +
+        s");\n")
+    //noinspection ZeroIndexToHead
     case ServerAddress(address) =>
+      headerPrintln(s"IPAddress server(" +
+        s"${address(0)}," +
+        s"${address(1)}," +
+        s"${address(2)}," +
+        s"${address(3)}" +
+        s");\n")
     case ServerPort(port) =>
-    case BufferSize(address) =>
+      headerPrintln(s"const int eht_port = $port;\n")
+    case BufferSize(size) =>
+      headerPrintln(s"const int bufferSize = $size;\nchar buf[bufferSize] = {'\\0'}\n")
     case SendToInfluxDB(data, dbName, source, fieldName) =>
     case _ => super.emitNode(sym, rhs)
   }

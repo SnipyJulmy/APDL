@@ -16,6 +16,10 @@ trait Example extends APDL {
 
     // TODO from string to Seq[Byte] for DSL
     macAddress(Seq(0x98b, 0x4F, 0xEE, 0x00, 0x81, 0x54))
+    ipAddress(Seq(172, 16, 0, 100))
+    serverAddress(Seq(160, 98, 61, 150))
+    serverPort(8086)
+    bufferSize(2084)
 
     def tf: Exp[(Int) => Float] = fun { a: Rep[Int] =>
       val B = 3975

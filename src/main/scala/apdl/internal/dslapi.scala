@@ -264,7 +264,11 @@ trait DslGenC extends CGenNumericOps with CGenArduino with APDLCGenFunctions
     withStream(out) {
       stream.println(
         """
-          | // Generated Code by Snipy
+          |#include <Ethernet.h>
+          |#include <Timer.h>
+          |#include "apdl-gen.h"
+          |
+          |EthernetClient client;
         """.stripMargin
       )
     }
@@ -287,7 +291,7 @@ abstract class DslDriver[A: Manifest, B: Manifest] extends DslSnippet[A, B] with
 
   lazy val code: String = {
     val source = new java.io.StringWriter()
-    codegen.emitSource(snippet, "Snippet", new java.io.PrintWriter(source))(manifestTyp[A], manifestTyp[B])
+    codegen.emitSource(snippet, "Snippet", apdl.ApdlOutputStream.mainStream )(manifestTyp[A], manifestTyp[B])
     source.toString
   }
 }
@@ -301,7 +305,7 @@ abstract class DslDriverC[A: Manifest, B: Manifest] extends DslSnippet[A, B] wit
     implicit val mA = manifestTyp[A]
     implicit val mB = manifestTyp[B]
     val source = new java.io.StringWriter()
-    codegen.emitSource(snippet, "Snippet", new java.io.PrintWriter(source))
+    codegen.emitSource(snippet, "Snippet", apdl.ApdlOutputStream.mainStream)
     source.toString
   }
 }

@@ -1,7 +1,5 @@
 package apdl.internal
 
-import java.io.{File, PrintWriter}
-
 import scala.lms.common.{BaseGenFunctions, CGenEffect, FunctionsExp}
 
 /**
@@ -18,7 +16,7 @@ trait APDLCGenFunctions extends CGenEffect with BaseGenFunctions {
 
       // we temporaly change the stream
       val bak = stream
-      stream = new PrintWriter(new File("tmp.function"))
+      stream = apdl.ApdlOutputStream.headerStream
 
       val retType = remap(getBlockResult(y).tp)
 
