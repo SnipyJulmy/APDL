@@ -1,4 +1,6 @@
-package function
+package apdl.internal
+
+import apdl.core.{Arduino, ArduinoExp, CGenArduino}
 
 import scala.lms.common._
 import scala.reflect.SourceContext
@@ -53,8 +55,16 @@ trait CGenUtilOps extends CGenBase {
   }
 }
 
-
-trait Dsl extends PrimitiveOps with NumericOps with BooleanOps with LiftString with LiftPrimitives with LiftNumeric with LiftBoolean with IfThenElse with Equal with RangeOps with OrderingOps with MiscOps with ArrayOps with StringOps with SeqOps with Functions with While with StaticData with Variables with LiftVariables with ObjectOps with UtilOps {
+trait Dsl extends PrimitiveOps
+  with NumericOps with BooleanOps with LiftString
+  with LiftPrimitives with LiftNumeric with LiftBoolean
+  with IfThenElse with Equal with RangeOps
+  with OrderingOps with MiscOps with ArrayOps
+  with StringOps  with Functions
+  with While with StaticData with Variables
+  with LiftVariables with ObjectOps with UtilOps
+  with MathOps with MathOpsExp
+  with Arduino {
   // implicit def repStrToSeqOps(a: Rep[String]) = new SeqOpsCls(a.asInstanceOf[Rep[Seq[Char]]])
 
   override def infix_&&(lhs: Rep[Boolean], rhs: => Rep[Boolean])(implicit pos: scala.reflect.SourceContext): Rep[Boolean] =
@@ -71,7 +81,8 @@ trait DslExp extends Dsl with PrimitiveOpsExpOpt with NumericOpsExpOpt
   with EffectExp with ArrayOpsExpOpt with StringOpsExp
   with SeqOpsExp with FunctionsRecursiveExp with WhileExp
   with StaticDataExp with VariablesExpOpt with ObjectOpsExpOpt
-  with UtilOpsExp with MathOpsExp {
+  with UtilOpsExp with MathOpsExp with ArduinoExp {
+
   override def boolean_or(lhs: Exp[Boolean], rhs: Exp[Boolean])(implicit pos: SourceContext): Exp[Boolean] = lhs match {
     case Const(false) => rhs
     case _ => super.boolean_or(lhs, rhs)
@@ -81,6 +92,8 @@ trait DslExp extends Dsl with PrimitiveOpsExpOpt with NumericOpsExpOpt
     case Const(true) => rhs
     case _ => super.boolean_and(lhs, rhs)
   }
+
+  override def unboxedFresh[A: Typ]: Exp[A] = fresh[A]
 
   case class GenerateComment(l: String) extends Def[Unit]
 
@@ -160,11 +173,11 @@ trait DslImpl extends DslExp {
 }
 
 // TODO: currently part of this is specific to the query tests. generalize? move?
-trait DslGenC extends CGenNumericOps
+trait DslGenC extends CGenNumericOps with CGenArduino with APDLCGenFunctions
   with CGenPrimitiveOps with CGenBooleanOps with CGenIfThenElse
   with CGenEqual with CGenRangeOps with CGenOrderingOps
   with CGenMiscOps with CGenArrayOps with CGenStringOps
-  with CGenSeqOps with APDLCGenFunctions with CGenWhile // Here, don't use CGenFunctions, but made our own !
+  with CGenSeqOps with CGenWhile // with CGenFunctions
   with CGenStaticData with CGenVariables
   with CGenObjectOps with CGenUtilOps {
   val IR: DslExp
@@ -251,51 +264,9 @@ trait DslGenC extends CGenNumericOps
     withStream(out) {
       stream.println(
         """
-      #include <fcntl.h>
-      #include <errno.h>
-      #include <err.h>
-      #include <sys/mman.h>
-      #include <sys/stat.h>
-      #include <stdio.h>
-      #include <stdint.h>
-      #include <unistd.h>
-      #ifndef MAP_FILE
-      #define MAP_FILE MAP_SHARED
-      #endif
-      int fsize(int fd) {
-        struct stat stat;
-        int res = fstat(fd,&stat);
-        return stat.st_size;
-      }
-      int printll(char* s) {
-        while (*s != '\n' && *s != ',' && *s != '\t') {
-          putchar(*s++);
-        }
-        return 0;
-      }
-      long hash(char *str0, int len)
-      {
-        unsigned char* str = (unsigned char*)str0;
-        unsigned long hash = 5381;
-        int c;
-
-        while ((c = *str++) && len--)
-          hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
-
-        return hash;
-      }
-      void Snippet(char*);
-      int main(int argc, char *argv[])
-      {
-        if (argc != 2) {
-          printf("usage: query <filename>\n");
-          return 0;
-        }
-        Snippet(argv[1]);
-        return 0;
-      }
-
-      """)
+          | // Generated Code by Snipy
+        """.stripMargin
+      )
     }
     super.emitSource[A](args, body, functionName, out)
   }
@@ -332,17 +303,5 @@ abstract class DslDriverC[A: Manifest, B: Manifest] extends DslSnippet[A, B] wit
     val source = new java.io.StringWriter()
     codegen.emitSource(snippet, "Snippet", new java.io.PrintWriter(source))
     source.toString
-  }
-
-  def eval(a: A): Unit = {
-    // TBD: should read result of type B?
-    val out = new java.io.PrintWriter("/tmp/snippet.c")
-    out.println(code)
-    out.close
-    //TODO: use precompile
-    (new java.io.File("/tmp/snippet")).delete
-    import scala.sys.process._
-    (s"cc -std=c99 -O3 /tmp/snippet.c -o /tmp/snippet": ProcessBuilder).lines.foreach(Console.println _)
-    (s"/tmp/snippet $a": ProcessBuilder).lines.foreach(Console.println _)
   }
 }
