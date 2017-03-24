@@ -1,6 +1,7 @@
-package function
+package apdl.internal
 
 import java.io.{File, PrintWriter}
+
 import scala.lms.common.{BaseGenFunctions, CGenEffect, FunctionsExp}
 
 /**
