@@ -15,4 +15,6 @@ package object Utils {
   implicit class ApdlByte(byte: Byte) {
     def cHex : String = "0x%02X" format byte
   }
+
+  implicit def byte2int(int : Int) : Byte = int.toByte
 }
