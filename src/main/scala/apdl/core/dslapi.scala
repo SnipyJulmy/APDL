@@ -1,6 +1,4 @@
-package apdl.internal
-
-import apdl.core.{Arduino, ArduinoExp, CGenArduino}
+package apdl.core
 
 import scala.lms.common._
 import scala.reflect.SourceContext
@@ -269,9 +267,18 @@ trait DslGenC extends CGenNumericOps with CGenArduino with APDLCGenFunctions
           |#include "apdl-gen.h"
           |
           |EthernetClient client;
+          |
+          |void loop() {
+          |  #include "apdl-loop.h"
+          |}
+          |
+          |void setup() {
+          |  #include "apdl-setup.h"
+          |}
         """.stripMargin
       )
     }
+
     super.emitSource[A](args, body, functionName, out)
   }
 }
@@ -291,7 +298,7 @@ abstract class DslDriver[A: Manifest, B: Manifest] extends DslSnippet[A, B] with
 
   lazy val code: String = {
     val source = new java.io.StringWriter()
-    codegen.emitSource(snippet, "Snippet", apdl.ApdlOutputStream.mainStream )(manifestTyp[A], manifestTyp[B])
+    codegen.emitSource(snippet, "Snippet", apdl.ApdlStreamManager.mainStream )(manifestTyp[A], manifestTyp[B])
     source.toString
   }
 }
@@ -305,7 +312,7 @@ abstract class DslDriverC[A: Manifest, B: Manifest] extends DslSnippet[A, B] wit
     implicit val mA = manifestTyp[A]
     implicit val mB = manifestTyp[B]
     val source = new java.io.StringWriter()
-    codegen.emitSource(snippet, "Snippet", apdl.ApdlOutputStream.mainStream)
+    codegen.emitSource(snippet, "Snippet", apdl.ApdlStreamManager.mainStream)
     source.toString
   }
 }
