@@ -1,6 +1,6 @@
 package apdl.core
 
-import apdl.ApdlOutputStream._
+import apdl.ApdlStreamManager._
 import apdl.Utils._
 
 import scala.language.implicitConversions
@@ -29,13 +29,11 @@ trait Arduino extends Base with PrimitiveOps with Functions {
   def bufferSize(size: Int)(implicit pos: SourceContext): Rep[Unit]
 
   // For sending data
-  def sendToInfluxDB[A: Typ](data: Rep[A], dbName: String, source: String, fieldName: String)(implicit pos: SourceContext): Rep[Unit]
-
-  // def sendDataToInfluxDB(dbName : String, source : String, )
+  def sendIntToInfluxDb(data: Rep[Int], dbName: String, source: String, fieldName: String, sampling: Int)(implicit pos: SourceContext): Rep[Unit]
+  def sendFloatToInfluxDb(data: Rep[Float], dbName: String, source: String, fieldName: String, sampling: Int)(implicit pos: SourceContext): Rep[Unit]
 }
 
 trait ArduinoExp extends Arduino with EffectExp with FunctionsExp {
-
   /*
    *  Node declaration
    */
@@ -54,7 +52,8 @@ trait ArduinoExp extends Arduino with EffectExp with FunctionsExp {
   case class ServerAddress(address: Seq[Int]) extends Def[Unit]
   case class ServerPort(port: Int) extends Def[Unit]
   case class BufferSize(size: Int) extends Def[Unit]
-  case class SendToInfluxDB[A: Typ](data: Exp[A], dbName: String, source: String, fieldName: String) extends Def[Unit]
+  case class SendIntToInfluxDB(data: Exp[Int], dbName: String, source: String, fieldName: String, sampling: Int) extends Def[Unit]
+  case class SendFloatToInfluxDB(data: Exp[Float], dbName: String, source: String, fieldName: String, sampling: Int) extends Def[Unit]
 
   /*
    *  Dsl implementation
@@ -74,15 +73,28 @@ trait ArduinoExp extends Arduino with EffectExp with FunctionsExp {
   }
 
   // Ethernet config
-  override def macAddress(address: Seq[Byte])(implicit pos: SourceContext): Exp[Unit] = reflectEffect(MacAddress(address))
-  override def ipAddress(address: Seq[Int])(implicit pos: SourceContext): Exp[Unit] = reflectEffect(IpAddress(address))
-  override def serverAddress(address: Seq[Int])(implicit pos: SourceContext): Exp[Unit] = reflectEffect(ServerAddress(address))
-  override def serverPort(port: Int)(implicit pos: SourceContext): Exp[Unit] = reflectEffect(ServerPort(port))
-  override def bufferSize(size: Int)(implicit pos: SourceContext): Exp[Unit] = reflectEffect(BufferSize(size))
+  override def macAddress(address: Seq[Byte])(implicit pos: SourceContext): Exp[Unit] = {
+    reflectEffect(MacAddress(address))
+  }
+  override def ipAddress(address: Seq[Int])(implicit pos: SourceContext): Exp[Unit] = {
+    reflectEffect(IpAddress(address))
+  }
+  override def serverAddress(address: Seq[Int])(implicit pos: SourceContext): Exp[Unit] = {
+    reflectEffect(ServerAddress(address))
+  }
+  override def serverPort(port: Int)(implicit pos: SourceContext): Exp[Unit] = {
+    reflectEffect(ServerPort(port))
+  }
+  override def bufferSize(size: Int)(implicit pos: SourceContext): Exp[Unit] = {
+    reflectEffect(BufferSize(size))
+  }
 
-  // Data send
-  override def sendToInfluxDB[A: Typ](data: Exp[A], dbName: String, source: String, fieldName: String)(implicit pos: SourceContext): Exp[Unit] = {
-    SendToInfluxDB(data, dbName, source, fieldName)
+  // Sending data
+  override def sendIntToInfluxDb(data: Exp[Int], dbName: String, source: String, fieldName: String, sampling: Int)(implicit pos: SourceContext): Exp[Unit] = {
+    reflectEffect(SendIntToInfluxDB(data, dbName, source, fieldName, sampling))
+  }
+  override def sendFloatToInfluxDb(data: Exp[Float], dbName: String, source: String, fieldName: String, sampling: Int)(implicit pos: SourceContext): Exp[Unit] = {
+    reflectEffect(SendFloatToInfluxDB(data, dbName, source, fieldName, sampling))
   }
 }
 
@@ -129,7 +141,38 @@ trait CGenArduino extends CGenEffect with BaseGenArduino {
       headerPrintln(s"const int eht_port = $port;\n")
     case BufferSize(size) =>
       headerPrintln(s"const int bufferSize = $size;\nchar buf[bufferSize] = {'\\0'}\n")
-    case SendToInfluxDB(data, dbName, source, fieldName) =>
+    // Send the data to influxdb, create a function which send the data
+    case SendIntToInfluxDB(data, dbName, source, fieldName, sampling) =>
+      headerPrintln {
+        s"""
+           |void sendData$fieldName(int ${quote(data)}) {
+           |  int numChars = 0;
+           |  numChars = sprintf(buf,"$dbName,");
+           |  numChars = sprintf(&buf[numChars],"SOURCE=$source");
+           |  numChars = sprintf(&buf[numChars],"$fieldName=%d" ,${quote(data)}());
+           |  sendData(buf,numChars);
+           |  memset(buf,'\\0',bufferSize);
+           |}
+         """.stripMargin
+      }
+      stream.println(s"sendData$fieldName(${quote(data)})")
+    case SendFloatToInfluxDB(data, dbName, source, fieldName, sampling) =>
+      headerPrintln {
+        s"""
+           |void sendData$fieldName(float  ${quote(data)}){
+           |  int numChars = 0;
+           |  numChars = sprintf(buf,"$dbName,");
+           |  numChars = sprintf(&buf[numChars],"SOURCE=$source");
+           |  numChars = sprintf(&buf[numChars],"$fieldName=%f" ,${quote(data)});
+           |  sendData(buf,numChars);
+           |  memset(buf,'\\0',bufferSize);
+           |}
+         """.stripMargin
+      }
+      stream.println(s"sendData$fieldName(${quote(data)})")
+      setupPrintln {
+        s"timer.every($sampling,sendData$fieldName);"
+      }
     case _ => super.emitNode(sym, rhs)
   }
 }
