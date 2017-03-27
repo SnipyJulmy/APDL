@@ -1,4 +1,4 @@
-package apdl.internal
+package apdl.core
 
 import scala.lms.common.{BaseGenFunctions, CGenEffect, FunctionsExp}
 
@@ -7,6 +7,7 @@ import scala.lms.common.{BaseGenFunctions, CGenEffect, FunctionsExp}
   * APDL Project
   */
 trait APDLCGenFunctions extends CGenEffect with BaseGenFunctions {
+
   val IR: FunctionsExp
 
   import IR._
@@ -16,7 +17,7 @@ trait APDLCGenFunctions extends CGenEffect with BaseGenFunctions {
 
       // we temporaly change the stream
       val bak = stream
-      stream = apdl.ApdlOutputStream.headerStream
+      stream = apdl.ApdlStreamManager.headerStream
 
       val retType = remap(getBlockResult(y).tp)
 
