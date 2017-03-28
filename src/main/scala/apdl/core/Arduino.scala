@@ -147,31 +147,34 @@ trait CGenArduino extends CGenEffect with BaseGenArduino {
         s"""
            |void sendData$fieldName(int ${quote(data)}) {
            |  int numChars = 0;
-           |  numChars = sprintf(buf,"$dbName,");
-           |  numChars = sprintf(&buf[numChars],"SOURCE=$source");
-           |  numChars = sprintf(&buf[numChars],"$fieldName=%d" ,${quote(data)}());
+           |  numChars += sprintf(buf,"$dbName,");
+           |  numChars += sprintf(&buf[numChars],"SOURCE=$source");
+           |  numChars += sprintf(&buf[numChars],"$fieldName=%d" ,${quote(data)});
            |  sendData(buf,numChars);
            |  memset(buf,'\\0',bufferSize);
            |}
          """.stripMargin
       }
       stream.println(s"sendData$fieldName(${quote(data)})")
+      headerPrintln {
+        s"int sampling$fieldName = $sampling;"
+      }
     case SendFloatToInfluxDB(data, dbName, source, fieldName, sampling) =>
       headerPrintln {
         s"""
-           |void sendData$fieldName(float  ${quote(data)}){
+           |void sendData$fieldName(float ${quote(data)}){
            |  int numChars = 0;
-           |  numChars = sprintf(buf,"$dbName,");
-           |  numChars = sprintf(&buf[numChars],"SOURCE=$source");
-           |  numChars = sprintf(&buf[numChars],"$fieldName=%f" ,${quote(data)});
+           |  numChars += sprintf(buf,"$dbName,");
+           |  numChars += sprintf(&buf[numChars],"SOURCE=$source");
+           |  numChars += sprintf(&buf[numChars],"$fieldName=%f" ,${quote(data)});
            |  sendData(buf,numChars);
            |  memset(buf,'\\0',bufferSize);
            |}
          """.stripMargin
       }
       stream.println(s"sendData$fieldName(${quote(data)})")
-      setupPrintln {
-        s"timer.every($sampling,sendData$fieldName);"
+      headerPrintln {
+        s"int sampling$fieldName = $sampling;"
       }
     case _ => super.emitNode(sym, rhs)
   }
