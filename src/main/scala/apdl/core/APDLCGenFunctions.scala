@@ -1,6 +1,7 @@
 package apdl.core
 
 import scala.lms.common.{BaseGenFunctions, CGenEffect, FunctionsExp}
+import apdl.ApdlStreamManager._
 
 /**
   * Created by snipy
@@ -17,7 +18,7 @@ trait APDLCGenFunctions extends CGenEffect with BaseGenFunctions {
 
       // we temporaly change the stream
       val bak = stream
-      stream = apdl.ApdlStreamManager.headerStream
+      stream = apdlHeaderStream
 
       val retType = remap(getBlockResult(y).tp)
 
