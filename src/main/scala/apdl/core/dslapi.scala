@@ -1,5 +1,7 @@
 package apdl.core
 
+import java.io.PrintWriter
+
 import scala.lms.common._
 import scala.reflect.SourceContext
 
@@ -58,7 +60,7 @@ trait Dsl extends PrimitiveOps
   with LiftPrimitives with LiftNumeric with LiftBoolean
   with IfThenElse with Equal with RangeOps
   with OrderingOps with MiscOps with ArrayOps
-  with StringOps  with Functions
+  with StringOps with Functions
   with While with StaticData with Variables
   with LiftVariables with ObjectOps with UtilOps
   with MathOps with MathOpsExp
@@ -159,6 +161,9 @@ trait DslGen extends ScalaGenNumericOps
       stream.println(quote(getBlockResult(b)))
       stream.println("//#" + s)
       stream.println("}")
+    case Assign(left, right) =>
+      println("Assign")
+      super.emitNode(sym, rhs)
     case _ => super.emitNode(sym, rhs)
   }
 }
@@ -257,32 +262,37 @@ trait DslGenC extends CGenNumericOps with CGenArduino with APDLCGenFunctions
     case _ => super.emitNode(sym, rhs)
   }
 
-  override def emitSource[A: Typ](args: List[Sym[_]], body: Block[A], functionName: String, out: java.io.PrintWriter) = {
+  override def emitSource[A: Typ](args: List[Sym[_]], body: Block[A], functionName: String, out: PrintWriter) = {
+    val sA = remap(typ[A])
 
     withStream(out) {
-      stream.println(
-        """
-          |#include <Ethernet.h>
-          |#include <Timer.h>
-          |#include "apdl-gen.h"
-          |
-          |EthernetClient client;
-          |
-          |void loop() {
-          |  #include "apdl-loop.h"
-          |}
-          |
-          |void setup() {
-          |  #include "apdl-setup.h"
-          |}
-        """.stripMargin
-      )
-    }
+      stream.println {
+        s"""
+           | /* Snipy Gen code */
+         """.stripMargin
+      }
 
-    super.emitSource[A](args, body, functionName, out)
+      stream.println(sA + " " + functionName + "() {")
+
+      emitBlock(body)
+
+      val y = getBlockResult(body)
+      if (remap(y.tp) != "void")
+        stream.println("return " + quote(y) + ";")
+
+      stream.println("}")
+      stream.println("/*****************************************\n" +
+        "  End of C Generated Code                  \n" +
+        "*******************************************/")
+    }
+    Nil
   }
 }
 
+abstract class ApdlProg extends Dsl {
+  def inputs(): Seq[(Rep[Unit] => Rep[Unit], String)]
+  def apdlMain(x: Rep[Unit]): Rep[Unit]
+}
 
 abstract class DslSnippet[A: Manifest, B: Manifest] extends Dsl {
   def snippet(x: Rep[A]): Rep[B]
@@ -298,7 +308,7 @@ abstract class DslDriver[A: Manifest, B: Manifest] extends DslSnippet[A, B] with
 
   lazy val code: String = {
     val source = new java.io.StringWriter()
-    codegen.emitSource(snippet, "Snippet", apdl.ApdlStreamManager.mainStream )(manifestTyp[A], manifestTyp[B])
+    codegen.emitSource(snippet, "Snippet", apdl.ApdlStreamManager.apdlMainStream)(manifestTyp[A], manifestTyp[B])
     source.toString
   }
 }
@@ -312,7 +322,44 @@ abstract class DslDriverC[A: Manifest, B: Manifest] extends DslSnippet[A, B] wit
     implicit val mA = manifestTyp[A]
     implicit val mB = manifestTyp[B]
     val source = new java.io.StringWriter()
-    codegen.emitSource(snippet, "Snippet", apdl.ApdlStreamManager.mainStream)
+    codegen.emitSource(snippet, "Snippet", apdl.ApdlStreamManager.apdlMainStream)
+    source.toString
+  }
+}
+
+abstract class ApdlDriver extends ApdlProg with DslExp {
+  q =>
+  val codegen = new DslGenC {
+    val IR: q.type = q
+  }
+  lazy val code: String = {
+    val source = new java.io.StringWriter()
+    source.append{
+      """
+        |#include <Ethernet.h>
+        |#include <Timer.h>
+        |#include "apdl-gen.h"
+        |#include <stdio.h>
+        |#include <stdlib.h>
+        |#include <string.h>
+        |#include <stdbool.h>
+        |
+        |EthernetClient client;
+        |
+        |void loop() {
+        |  #include "apdl-loop.h"
+        |}
+        |
+        |void setup() {
+        |  #include "apdl-setup.h"
+        |}
+      """.stripMargin
+    }.flush()
+    inputs().foreach { f =>
+      apdl.ApdlStreamManager.setupPrintln(s"timer.every(sampling${f._2},callbackSend_${f._2})")
+      codegen.emitSource(f._1, s"callbackSend_${f._2}", apdl.ApdlStreamManager.apdlMainStream)
+    }
+    codegen.emitSource(apdlMain, "Main", apdl.ApdlStreamManager.apdlMainStream)
     source.toString
   }
 }
