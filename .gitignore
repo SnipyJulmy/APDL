@@ -23,3 +23,6 @@ project/plugins/project/
 /tmp.function
 /apdl-gen.h
 /apdl-main.ino
+/apdl-loop.h
+/apdl-main.c
+/apdl-setup.h
