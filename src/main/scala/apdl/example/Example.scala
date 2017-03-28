@@ -1,9 +1,7 @@
 package apdl.example
 
-import java.io.File
-
-import apdl.Utils._
 import apdl.core._
+import apdl.Utils._
 
 /**
   * Created by snipy
@@ -11,8 +9,32 @@ import apdl.core._
   */
 trait Example extends APDL {
 
-  def ExampleMain = {
+  val dbName = "arduino-sensor"
+  val source = "arduino_1"
+  val tempTopic = "temp"
+  val lumTopic = "light"
 
+  def DataTemp: Exp[Unit] = {
+    def tf = fun { a: Rep[Int] =>
+      val B = 3975
+      val res = (1023 - a) * 10000 / a
+      val log = math_log(res / 10000) / B + 1 / 298.15
+      val inv_log = 1 / log.toInt
+      val temperature = inv_log - 273.15.toInt
+      temperature
+
+    }
+    val temp = applyTransform(tf, analogInput(1))
+    sendFloatToInfluxDb(temp, dbName, source, tempTopic, 1000)
+  }
+
+  def DataLum: Exp[Unit] = {
+    val lum = analogInput(0)
+
+    sendIntToInfluxDb(lum, dbName, source, lumTopic, 1000)
+  }
+
+  def Config: Exp[Unit] = {
     // TODO from string to Seq[Byte] for DSL
     // TODO specify what is available to the DSL user and what is not : bufferSize ???
     macAddress(Seq(0x98b, 0x4F, 0xEE, 0x00, 0x81, 0x54))
@@ -20,32 +42,16 @@ trait Example extends APDL {
     serverAddress(Seq(160, 98, 61, 150))
     serverPort(8086)
     bufferSize(2084)
-
-    val dbName = "arduino-sensor"
-    val source = "arduino_1"
-    val tempTopic = "temp"
-    val lumTopic = "light"
-
-    def tf: Exp[(Int) => Float] = fun { a: Rep[Int] =>
-      val B = 3975
-      val res = (1023 - a) * 10000 / a
-      val log = math_log(res / 10000) / B + 1 / 298.15
-      val inv_log = 1 / log.toInt
-      val temperature = inv_log - 273.15.toInt
-      temperature
-    }
-    val temp = applyTransform(tf, analogInput(1))
-    val lum = analogInput(0)
-    sendIntToInfluxDb(lum, dbName, source, lumTopic, 1000)
-    sendFloatToInfluxDb(temp, dbName, source, tempTopic, 1000)
   }
 }
 
 object Test extends App {
-  def compiler(): DslDriverC[Unit, Unit] = new DslDriverC[Unit, Unit] with Example {
-    def snippet(a: Rep[Unit]): Rep[Unit] = ExampleMain
+  def compiler(): ApdlDriver = new ApdlDriver with Example {
+    override def inputs(): Seq[((Exp[Unit]) => (Exp[Unit]),String)] = List(
+      ((_: Exp[Unit]) => DataTemp,"temp"),
+      ((_: Exp[Unit]) => DataLum,"light")
+    )
+    override def apdlMain(x: Exp[Unit]): Exp[Unit] = Config
   }
-  val f = new File("apdl-gen.h")
-  f.delete()
   println(compiler().code)
 }
