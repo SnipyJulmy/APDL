@@ -1,7 +1,7 @@
 package apdl.example
 
-import apdl.core._
 import apdl.Utils._
+import apdl.core._
 
 /**
   * Created by snipy
@@ -25,13 +25,14 @@ trait Example extends APDL {
 
     }
     val temp = applyTransform(tf, analogInput(1))
-    sendFloatToInfluxDb(temp, dbName, source, tempTopic, 1000)
+    val tempSampling = 1000 // ms
+    sendFloatToInfluxDb(temp, dbName, source, tempTopic,tempSampling)
   }
 
   def DataLum: Exp[Unit] = {
     val lum = analogInput(0)
-
-    sendIntToInfluxDb(lum, dbName, source, lumTopic, 1000)
+    val lumSampling = 1000 // ms
+    sendIntToInfluxDb(lum, dbName, source, lumTopic, lumSampling)
   }
 
   def Config: Exp[Unit] = {
@@ -45,13 +46,13 @@ trait Example extends APDL {
   }
 }
 
-object Test extends App {
+object ExampleApp extends App {
   def compiler(): ApdlDriver = new ApdlDriver with Example {
-    override def inputs(): Seq[((Exp[Unit]) => (Exp[Unit]),String)] = List(
-      ((_: Exp[Unit]) => DataTemp,"temp"),
-      ((_: Exp[Unit]) => DataLum,"light")
+    override def inputs(): Seq[((Exp[Unit]) => (Exp[Unit]), String)] = List(
+      ((_: Exp[Unit]) => DataTemp, "temp"),
+      ((_: Exp[Unit]) => DataLum, "light")
     )
     override def apdlMain(x: Exp[Unit]): Exp[Unit] = Config
   }
-  println(compiler().code)
+  compiler().genCode()
 }
