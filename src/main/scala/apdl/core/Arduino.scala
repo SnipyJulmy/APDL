@@ -138,12 +138,12 @@ trait CGenArduino extends CGenEffect with BaseGenArduino {
         s"${address(3)}" +
         s");\n")
     case ServerPort(port) =>
-      headerPrintln(s"const int eht_port = $port;\n")
+      headerPrintln(s"const int eth_port = $port;\n")
     case BufferSize(size) =>
-      headerPrintln(s"const int bufferSize = $size;\nchar buf[bufferSize] = {'\\0'}\n")
+      headerPrintln(s"const int bufferSize = $size;\nchar buf[bufferSize] = {'\\0'};\n")
     // Send the data to influxdb, create a function which send the data
     case SendIntToInfluxDB(data, dbName, source, fieldName, sampling) =>
-      headerPrintln {
+      functionPrintln {
         s"""
            |void sendData$fieldName(int ${quote(data)}) {
            |  int numChars = 0;
@@ -155,12 +155,12 @@ trait CGenArduino extends CGenEffect with BaseGenArduino {
            |}
          """.stripMargin
       }
-      stream.println(s"sendData$fieldName(${quote(data)})")
+      stream.println(s"sendData$fieldName(${quote(data)});")
       headerPrintln {
         s"int sampling$fieldName = $sampling;"
       }
     case SendFloatToInfluxDB(data, dbName, source, fieldName, sampling) =>
-      headerPrintln {
+      functionPrintln {
         s"""
            |void sendData$fieldName(float ${quote(data)}){
            |  int numChars = 0;
@@ -172,7 +172,7 @@ trait CGenArduino extends CGenEffect with BaseGenArduino {
            |}
          """.stripMargin
       }
-      stream.println(s"sendData$fieldName(${quote(data)})")
+      stream.println(s"sendData$fieldName(${quote(data)});")
       headerPrintln {
         s"int sampling$fieldName = $sampling;"
       }
