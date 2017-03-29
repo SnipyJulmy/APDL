@@ -26,3 +26,4 @@ project/plugins/project/
 /apdl-loop.h
 /apdl-main.c
 /apdl-setup.h
+/apdl-gen/
