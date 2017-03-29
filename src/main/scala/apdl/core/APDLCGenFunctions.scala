@@ -18,7 +18,7 @@ trait APDLCGenFunctions extends CGenEffect with BaseGenFunctions {
 
       // we temporaly change the stream
       val bak = stream
-      stream = apdlHeaderStream
+      stream = apdlFunctionStream
 
       val retType = remap(getBlockResult(y).tp)
 
