@@ -17,7 +17,7 @@ trait UtilOpsExp extends UtilOps with BaseExp {
   this: DslExp =>
 
   case class ObjHashCode[T: Typ](o: Rep[T])(implicit pos: SourceContext) extends Def[Long] {
-    def m = typ[T]
+    def m: Typ[T] = typ[T]
   }
 
   case class StrSubHashCode(o: Rep[String], len: Rep[Int])(implicit pos: SourceContext) extends Def[Long]
@@ -33,23 +33,12 @@ trait UtilOpsExp extends UtilOps with BaseExp {
   }).asInstanceOf[Exp[A]]
 }
 
-trait ScalaGenUtilOps extends ScalaGenBase {
-  val IR: UtilOpsExp
-
-  import IR._
-
-  override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
-    case ObjHashCode(o) => emitValDef(sym, src"$o.##")
-    case _ => super.emitNode(sym, rhs)
-  }
-}
-
 trait CGenUtilOps extends CGenBase {
   val IR: UtilOpsExp
 
   import IR._
 
-  override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
+  override def emitNode(sym: Sym[Any], rhs: Def[Any]): Unit = rhs match {
     case StrSubHashCode(o, len) => emitValDef(sym, src"hash($o,$len)")
     case _ => super.emitNode(sym, rhs)
   }
@@ -97,7 +86,7 @@ trait DslExp extends Dsl with PrimitiveOpsExpOpt with NumericOpsExpOpt
 
   case class GenerateComment(l: String) extends Def[Unit]
 
-  def generate_comment(l: String) = reflectEffect(GenerateComment(l))
+  def generate_comment(l: String): Exp[Unit] = reflectEffect(GenerateComment(l))
 
   case class Comment[A: Typ](l: String, verbose: Boolean, b: Block[A]) extends Def[A]
 
@@ -113,69 +102,13 @@ trait DslExp extends Dsl with PrimitiveOpsExpOpt with NumericOpsExpOpt
   }
 
   override def array_apply[T: Typ](x: Exp[Array[T]], n: Exp[Int])(implicit pos: SourceContext): Exp[T] = (x, n) match {
-    case (Def(StaticData(x: Array[T])), Const(n)) =>
-      val y = x(n)
+    case (Def(StaticData(x: Array[T])), Const(c)) =>
+      val y = x(c)
       if (y.isInstanceOf[Int]) unit(y) else staticData(y)
     case _ => super.array_apply(x, n)
   }
-
-  // TODO: should this be in LMS?
-  // override def isPrimitiveType[T](m: Typ[T]) = (m == manifest[String]) || super.isPrimitiveType(m)
 }
 
-trait DslGen extends ScalaGenNumericOps
-  with ScalaGenPrimitiveOps with ScalaGenBooleanOps with ScalaGenIfThenElse
-  with ScalaGenEqual with ScalaGenRangeOps with ScalaGenOrderingOps
-  with ScalaGenMiscOps with ScalaGenArrayOps with ScalaGenStringOps
-  with ScalaGenSeqOps with ScalaGenFunctions with ScalaGenWhile
-  with ScalaGenStaticData with ScalaGenVariables
-  with ScalaGenObjectOps
-  with ScalaGenUtilOps {
-  val IR: DslExp
-
-  import IR._
-
-  override def quote(x: Exp[Any]) = x match {
-    case Const('\n') if x.tp == typ[Char] => "'\\n'"
-    case Const('\t') if x.tp == typ[Char] => "'\\t'"
-    case Const(0) if x.tp == typ[Char] => "'\\0'"
-    case _ => super.quote(x)
-  }
-
-  override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
-    case IfThenElse(c, Block(Const(true)), Block(Const(false))) =>
-      emitValDef(sym, quote(c))
-    case PrintF(f: String, xs) =>
-      emitValDef(sym, src"printf(${Const(f) :: xs})")
-    case GenerateComment(s) =>
-      stream.println("// " + s)
-    case Comment(s, verbose, b) =>
-      stream.println("val " + quote(sym) + " = {")
-      stream.println("//#" + s)
-      if (verbose) {
-        stream.println("// generated code for " + s.replace('_', ' '))
-      } else {
-        stream.println("// generated code")
-      }
-      emitBlock(b)
-      stream.println(quote(getBlockResult(b)))
-      stream.println("//#" + s)
-      stream.println("}")
-    case Assign(left, right) =>
-      println("Assign")
-      super.emitNode(sym, rhs)
-    case _ => super.emitNode(sym, rhs)
-  }
-}
-
-trait DslImpl extends DslExp {
-  q =>
-  val codegen = new DslGen {
-    val IR: q.type = q
-  }
-}
-
-// TODO: currently part of this is specific to the query tests. generalize? move?
 trait DslGenC extends CGenNumericOps with CGenArduino with APDLCGenFunctions
   with CGenPrimitiveOps with CGenBooleanOps with CGenIfThenElse
   with CGenEqual with CGenRangeOps with CGenOrderingOps
@@ -231,7 +164,7 @@ trait DslGenC extends CGenNumericOps with CGenArduino with APDLCGenFunctions
     }
   }
 
-  override def quote(x: Exp[Any]) = x match {
+  override def quote(x: Exp[Any]): String = x match {
     case Const(s: String) => "\"" + s.replace("\"", "\\\"") + "\"" // TODO: more escapes?
     case Const('\n') if x.tp == typ[Char] => "'\\n'"
     case Const('\t') if x.tp == typ[Char] => "'\\t'"
@@ -239,7 +172,7 @@ trait DslGenC extends CGenNumericOps with CGenArduino with APDLCGenFunctions
     case _ => super.quote(x)
   }
 
-  override def emitNode(sym: Sym[Any], rhs: Def[Any]) = rhs match {
+  override def emitNode(sym: Sym[Any], rhs: Def[Any]): Unit = rhs match {
     case a@ArrayNew(n) =>
       val arrType = remap(a.m)
       stream.println(arrType + "* " + quote(sym) + " = " + getMemoryAllocString(quote(n), arrType))
@@ -261,14 +194,17 @@ trait DslGenC extends CGenNumericOps with CGenArduino with APDLCGenFunctions
     case _ => super.emitNode(sym, rhs)
   }
 
+  //noinspection TypeAnnotation
   override def emitSource[A: Typ](args: List[Sym[_]], body: Block[A], functionName: String, out: PrintWriter) = {
     val sA = remap(typ[A])
 
     withStream(out) {
       stream.println {
-        s"""
-           | /* Snipy Gen code */
-         """.stripMargin
+        """
+          |/*
+          | * Start of C Generated Code
+          | */
+        """.stripMargin
       }
 
       stream.println(sA + " " + functionName + "() {")
@@ -280,161 +216,132 @@ trait DslGenC extends CGenNumericOps with CGenArduino with APDLCGenFunctions
         stream.println("return " + quote(y) + ";")
 
       stream.println("}")
-      stream.println("/*****************************************\n" +
-        "  End of C Generated Code                  \n" +
-        "*******************************************/")
+      stream.println {
+        """
+          |/*
+          | * End of C Generated Code
+          | */
+        """.stripMargin
+      }
+      Nil
     }
-    Nil
   }
-}
 
-abstract class ApdlProg extends Dsl {
-  def inputs(): Seq[(Rep[Unit] => Rep[Unit], String)]
-  def apdlMain(x: Rep[Unit]): Rep[Unit]
-}
-
-abstract class DslSnippet[A: Manifest, B: Manifest] extends Dsl {
-  def snippet(x: Rep[A]): Rep[B]
-}
-
-abstract class DslDriver[A: Manifest, B: Manifest] extends DslSnippet[A, B] with DslImpl with CompileScala {
-  lazy val f = compile(snippet)(manifestTyp[A], manifestTyp[B])
-
-  def precompile: Unit = f
-
-  // def precompileSilently: Unit = utils.devnull(f)
-  def eval(x: A): B = f(x)
-
-  lazy val code: String = {
-    val source = new java.io.StringWriter()
-    codegen.emitSource(snippet, "Snippet", apdl.ApdlStreamManager.apdlMainStream)(manifestTyp[A], manifestTyp[B])
-    source.toString
+  abstract class ApdlProg extends Dsl {
+    def inputs(): Seq[(Rep[Unit] => Rep[Unit], String)]
+    def apdlMain(x: Rep[Unit]): Rep[Unit]
   }
-}
 
-abstract class DslDriverC[A: Manifest, B: Manifest] extends DslSnippet[A, B] with DslExp {
-  q =>
-  val codegen = new DslGenC {
-    val IR: q.type = q
-  }
-  lazy val code: String = {
-    implicit val mA = manifestTyp[A]
-    implicit val mB = manifestTyp[B]
-    val source = new java.io.StringWriter()
-    codegen.emitSource(snippet, "Snippet", apdl.ApdlStreamManager.apdlMainStream)
-    source.toString
-  }
-}
-
-abstract class ApdlDriver extends ApdlProg with DslExp {
-  q =>
-  val codegen = new DslGenC {
-    val IR: q.type = q
-  }
-  def genCode(): Unit = {
-    // Generate include
-    apdl.ApdlStreamManager.mainPrintln {
-      """
-        |#include <Ethernet.h>
-        |#include <Timer.h>
-        |#include <stdio.h>
-        |#include <stdlib.h>
-        |#include <string.h>
-        |#include <stdbool.h>
-        |
-        |EthernetClient client;
-        |Timer timer;
-        |
-        |#include "apdl-header.h"
-        |#include "apdl-fun.h"
-        |
-        |void loop() {
-        |  #include "apdl-loop.h"
-        |}
-        |
-        |void setup() {
-        |  #include "apdl-setup.h"
-        |}
-      """.stripMargin
+  abstract class ApdlDriver extends ApdlProg with DslExp {
+    q =>
+    val codegen = new DslGenC {
+      val IR: q.type = q
     }
+    def genCode(): Unit = {
+      // Generate include
+      apdl.ApdlStreamManager.mainPrintln {
+        """
+          |#include <Ethernet.h>
+          |#include <Timer.h>
+          |#include <stdio.h>
+          |#include <stdlib.h>
+          |#include <string.h>
+          |#include <stdbool.h>
+          |
+          |EthernetClient client;
+          |Timer timer;
+          |
+          |#include "apdl-header.h"
+          |#include "apdl-fun.h"
+          |
+          |void loop() {
+          |  #include "apdl-loop.h"
+          |}
+          |
+          |void setup() {
+          |  #include "apdl-setup.h"
+          |}
+        """.stripMargin
+      }
 
-    // Generate info for the setup
-    apdl.ApdlStreamManager.setupPrintln {
-      s"""
-         |Serial.begin(115200);
-         |delay(1000);
-         |connectToInflux();
+      // Generate info for the setup
+      apdl.ApdlStreamManager.setupPrintln {
+        s"""
+           |Serial.begin(115200);
+           |delay(1000);
+           |connectToInflux();
        """.stripMargin
-    }
+      }
 
-    // Connecting to Influx arduino function
-    apdl.ApdlStreamManager.functionPrintln {
-      s"""
-         |void connectToInflux() {
-         |  if (Ethernet.begin(mac) == 0) {
-         |    Serial.println("Failed to configure Ethernet using DHCP");
-         |    // no point in carrying on, so do nothing forevermore:
-         |    // try to congifure using IP address instead of DHCP:
-         |    Ethernet.begin(mac, ip);
-         |  }
-         |  delay(2000); // give time to allow connection
-         |
+      // Connecting to Influx arduino function
+      apdl.ApdlStreamManager.functionPrintln {
+        s"""
+           |void connectToInflux() {
+           |  if (Ethernet.begin(mac) == 0) {
+           |    Serial.println("Failed to configure Ethernet using DHCP");
+           |    // no point in carrying on, so do nothing forevermore:
+           |    // try to congifure using IP address instead of DHCP:
+           |    Ethernet.begin(mac, ip);
+           |  }
+           |  delay(2000); // give time to allow connection
+           |
          |  //do a fast test if we can connect to server
-         |  int conState = client.connect(server, eth_port);
-         |
+           |  int conState = client.connect(server, eth_port);
+           |
          |  if (conState > 0) {
-         |    Serial.println("Connected to InfluxDB server");
-         |    client.stop();
-         |  }
-         |
+           |    Serial.println("Connected to InfluxDB server");
+           |    client.stop();
+           |  }
+           |
          |  //print the error number and return false
-         |  Serial.print("Could not connect to InfluxDB Server, Error #");
-         |  Serial.println(conState);
-         |}
+           |  Serial.print("Could not connect to InfluxDB Server, Error #");
+           |  Serial.println(conState);
+           |}
        """.stripMargin
-    }
+      }
 
-    // Sending data function for Arduino
-    apdl.ApdlStreamManager.functionPrintln {
-      s"""
-         |void sendData(char* data, int dataSize) {
-         |  //first we need to connect to InfluxDB server
-         |  int conState = client.connect(server, eth_port);
-         |
+      // Sending data function for Arduino
+      apdl.ApdlStreamManager.functionPrintln {
+        s"""
+           |void sendData(char* data, int dataSize) {
+           |  //first we need to connect to InfluxDB server
+           |  int conState = client.connect(server, eth_port);
+           |
          |  if (conState <= 0) { //check if connection to server is stablished
-         |    Serial.print("Could not connect to InfluxDB Server, Error #");
-         |    Serial.println(conState);
-         |    return;
-         |  }
-         |
+           |    Serial.print("Could not connect to InfluxDB Server, Error #");
+           |    Serial.println(conState);
+           |    return;
+           |  }
+           |
          |  //Send HTTP header and buffer
-         |  client.println("POST /write?db=arduino HTTP/1.1");
-         |  client.println("Host: www.embedonix.com");
-         |  client.println("User-Agent: Arduino/1.0");
-         |  client.println("Connection: close");
-         |  client.println("Content-Type: application/x-www-form-urlencoded");
-         |  client.print("Content-Length: ");
-         |  client.println(dataSize);
-         |  client.println();
-         |  client.println(data);
-         |
+           |  client.println("POST /write?db=arduino HTTP/1.1");
+           |  client.println("Host: www.embedonix.com");
+           |  client.println("User-Agent: Arduino/1.0");
+           |  client.println("Connection: close");
+           |  client.println("Content-Type: application/x-www-form-urlencoded");
+           |  client.print("Content-Length: ");
+           |  client.println(dataSize);
+           |  client.println();
+           |  client.println(data);
+           |
          |  delay(50); //wait for server to process data
-         |
+           |
          |  //Now we read what server has replied and then we close the connection
-         |  Serial.println("Reply from InfluxDB");
-         |  while (client.available()) { //receive char
-         |    Serial.print((char)client.read());
-         |  }
-         |  Serial.println(); //empty line
-         |
+           |  Serial.println("Reply from InfluxDB");
+           |  while (client.available()) { //receive char
+           |    Serial.print((char)client.read());
+           |  }
+           |  Serial.println(); //empty line
+           |
          |  client.stop();
-         |}
+           |}
        """.stripMargin
+      }
+      inputs().foreach { f =>
+        apdl.ApdlStreamManager.setupPrintln(s"timer.every(sampling${f._2},callbackSend_${f._2});")
+        codegen.emitSource(f._1, s"callbackSend_${f._2}", apdl.ApdlStreamManager.apdlMainStream)
+      }
+      codegen.emitSource(apdlMain, "Main", apdl.ApdlStreamManager.apdlMainStream)
     }
-    inputs().foreach { f =>
-      apdl.ApdlStreamManager.setupPrintln(s"timer.every(sampling${f._2},callbackSend_${f._2});")
-      codegen.emitSource(f._1, s"callbackSend_${f._2}", apdl.ApdlStreamManager.apdlMainStream)
-    }
-    codegen.emitSource(apdlMain, "Main", apdl.ApdlStreamManager.apdlMainStream)
   }
 }
