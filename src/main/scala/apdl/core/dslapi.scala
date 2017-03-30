@@ -5,7 +5,7 @@ import java.io.PrintWriter
 import scala.lms.common._
 import scala.reflect.SourceContext
 
-// should this be added to LMS?
+// TODO : refactor this file
 trait UtilOps extends Base {
   this: Dsl =>
   def infix_HashCode[T: Typ](o: Rep[T])(implicit pos: SourceContext): Rep[Long]
@@ -180,7 +180,7 @@ trait DslGenC extends CGenNumericOps with CGenArduino with APDLCGenFunctions
   with CGenPrimitiveOps with CGenBooleanOps with CGenIfThenElse
   with CGenEqual with CGenRangeOps with CGenOrderingOps
   with CGenMiscOps with CGenArrayOps with CGenStringOps
-  with CGenSeqOps with CGenWhile // with CGenFunctions
+  with CGenSeqOps with CGenWhile with APDLCGenMath
   with CGenStaticData with CGenVariables
   with CGenObjectOps with CGenUtilOps {
   val IR: DslExp
@@ -258,7 +258,6 @@ trait DslGenC extends CGenNumericOps with CGenArduino with APDLCGenFunctions
       emitValDef(sym, quote(getBlockResult(b)))
       stream.println("//#" + s)
     // Add Mathematical operator !
-    case MathLog(x) => emitValDef(sym, s"log(${quote(x)})")
     case _ => super.emitNode(sym, rhs)
   }
 
