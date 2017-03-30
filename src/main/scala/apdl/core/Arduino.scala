@@ -29,7 +29,7 @@ trait Arduino extends Base with PrimitiveOps with Functions {
   def bufferSize(size: Int)(implicit pos: SourceContext): Rep[Unit]
 
   // For sending data
-  def sendIntToInfluxDb(data: Rep[Int], dbName: String, source: String, fieldName: String, sampling: Int)(implicit pos: SourceContext): Rep[Unit]
+  def sendIntToInfluxDb(data: Rep[Int], dbName: String, source: String, topic: String, sampling: Int)(implicit pos: SourceContext): Rep[Unit]
   def sendFloatToInfluxDb(data: Rep[Float], dbName: String, source: String, fieldName: String, sampling: Int)(implicit pos: SourceContext): Rep[Unit]
 }
 
