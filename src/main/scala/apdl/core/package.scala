@@ -15,7 +15,7 @@ package object Utils {
     def cHex: String = "0x%02X" format byte
   }
 
-  implicit def byte2int(int: Int): Byte = int.toByte
+  implicit def int2byte(int: Int): Byte = int.toByte
 }
 
 package object ApdlStreamManager {
@@ -76,7 +76,7 @@ package object ApdlStreamManager {
     apdlPrintln(ApdlSetupStream)(s)
   }
 
-  def functionPrintln(s : String) : Unit = {
+  def functionPrintln(s: String): Unit = {
     apdlPrintln(ApdlFunctionStream)(s)
   }
 
