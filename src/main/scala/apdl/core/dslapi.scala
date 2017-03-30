@@ -113,7 +113,7 @@ trait DslGenC extends CGenNumericOps with CGenArduino with APDLCGenFunctions
   with CGenPrimitiveOps with CGenBooleanOps with CGenIfThenElse
   with CGenEqual with CGenRangeOps with CGenOrderingOps
   with CGenMiscOps with CGenArrayOps with CGenStringOps
-  with CGenSeqOps with CGenWhile with APDLCGenMath
+  with CGenSeqOps with CGenWhile with ArduinoGenMath
   with CGenStaticData with CGenVariables
   with CGenObjectOps with CGenUtilOps {
   val IR: DslExp
