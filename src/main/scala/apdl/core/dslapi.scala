@@ -227,121 +227,122 @@ trait DslGenC extends CGenNumericOps with CGenArduino with APDLCGenFunctions
     }
   }
 
-  abstract class ApdlProg extends Dsl {
-    def inputs(): Seq[(Rep[Unit] => Rep[Unit], String)]
-    def apdlMain(x: Rep[Unit]): Rep[Unit]
+}
+
+abstract class ApdlProg extends Dsl {
+  def inputs(): Seq[(Rep[Unit] => Rep[Unit], String)]
+  def apdlMain(x: Rep[Unit]): Rep[Unit]
+}
+
+abstract class ApdlDriver extends ApdlProg with DslExp {
+  q =>
+  val codegen = new DslGenC {
+    val IR: q.type = q
   }
-
-  abstract class ApdlDriver extends ApdlProg with DslExp {
-    q =>
-    val codegen = new DslGenC {
-      val IR: q.type = q
+  def genCode(): Unit = {
+    // Generate include
+    apdl.ApdlStreamManager.mainPrintln {
+      """
+        |#include <Ethernet.h>
+        |#include <Timer.h>
+        |#include <stdio.h>
+        |#include <stdlib.h>
+        |#include <string.h>
+        |#include <stdbool.h>
+        |
+        |EthernetClient client;
+        |Timer timer;
+        |
+        |#include "apdl-header.h"
+        |#include "apdl-fun.h"
+        |
+        |void loop() {
+        |  #include "apdl-loop.h"
+        |}
+        |
+        |void setup() {
+        |  #include "apdl-setup.h"
+        |}
+      """.stripMargin
     }
-    def genCode(): Unit = {
-      // Generate include
-      apdl.ApdlStreamManager.mainPrintln {
-        """
-          |#include <Ethernet.h>
-          |#include <Timer.h>
-          |#include <stdio.h>
-          |#include <stdlib.h>
-          |#include <string.h>
-          |#include <stdbool.h>
-          |
-          |EthernetClient client;
-          |Timer timer;
-          |
-          |#include "apdl-header.h"
-          |#include "apdl-fun.h"
-          |
-          |void loop() {
-          |  #include "apdl-loop.h"
-          |}
-          |
-          |void setup() {
-          |  #include "apdl-setup.h"
-          |}
-        """.stripMargin
-      }
 
-      // Generate info for the setup
-      apdl.ApdlStreamManager.setupPrintln {
-        s"""
-           |Serial.begin(115200);
-           |delay(1000);
-           |connectToInflux();
+    // Generate info for the setup
+    apdl.ApdlStreamManager.setupPrintln {
+      s"""
+         |Serial.begin(115200);
+         |delay(1000);
+         |connectToInflux();
        """.stripMargin
-      }
+    }
 
-      // Connecting to Influx arduino function
-      apdl.ApdlStreamManager.functionPrintln {
-        s"""
-           |void connectToInflux() {
-           |  if (Ethernet.begin(mac) == 0) {
-           |    Serial.println("Failed to configure Ethernet using DHCP");
-           |    // no point in carrying on, so do nothing forevermore:
-           |    // try to congifure using IP address instead of DHCP:
-           |    Ethernet.begin(mac, ip);
-           |  }
-           |  delay(2000); // give time to allow connection
-           |
+    // Connecting to Influx arduino function
+    apdl.ApdlStreamManager.functionPrintln {
+      s"""
+         |void connectToInflux() {
+         |  if (Ethernet.begin(mac) == 0) {
+         |    Serial.println("Failed to configure Ethernet using DHCP");
+         |    // no point in carrying on, so do nothing forevermore:
+         |    // try to congifure using IP address instead of DHCP:
+         |    Ethernet.begin(mac, ip);
+         |  }
+         |  delay(2000); // give time to allow connection
+         |
          |  //do a fast test if we can connect to server
-           |  int conState = client.connect(server, eth_port);
-           |
+         |  int conState = client.connect(server, eth_port);
+         |
          |  if (conState > 0) {
-           |    Serial.println("Connected to InfluxDB server");
-           |    client.stop();
-           |  }
-           |
+         |    Serial.println("Connected to InfluxDB server");
+         |    client.stop();
+         |  }
+         |
          |  //print the error number and return false
-           |  Serial.print("Could not connect to InfluxDB Server, Error #");
-           |  Serial.println(conState);
-           |}
+         |  Serial.print("Could not connect to InfluxDB Server, Error #");
+         |  Serial.println(conState);
+         |}
        """.stripMargin
-      }
-
-      // Sending data function for Arduino
-      apdl.ApdlStreamManager.functionPrintln {
-        s"""
-           |void sendData(char* data, int dataSize) {
-           |  //first we need to connect to InfluxDB server
-           |  int conState = client.connect(server, eth_port);
-           |
-         |  if (conState <= 0) { //check if connection to server is stablished
-           |    Serial.print("Could not connect to InfluxDB Server, Error #");
-           |    Serial.println(conState);
-           |    return;
-           |  }
-           |
-         |  //Send HTTP header and buffer
-           |  client.println("POST /write?db=arduino HTTP/1.1");
-           |  client.println("Host: www.embedonix.com");
-           |  client.println("User-Agent: Arduino/1.0");
-           |  client.println("Connection: close");
-           |  client.println("Content-Type: application/x-www-form-urlencoded");
-           |  client.print("Content-Length: ");
-           |  client.println(dataSize);
-           |  client.println();
-           |  client.println(data);
-           |
-         |  delay(50); //wait for server to process data
-           |
-         |  //Now we read what server has replied and then we close the connection
-           |  Serial.println("Reply from InfluxDB");
-           |  while (client.available()) { //receive char
-           |    Serial.print((char)client.read());
-           |  }
-           |  Serial.println(); //empty line
-           |
-         |  client.stop();
-           |}
-       """.stripMargin
-      }
-      inputs().foreach { f =>
-        apdl.ApdlStreamManager.setupPrintln(s"timer.every(sampling${f._2},callbackSend_${f._2});")
-        codegen.emitSource(f._1, s"callbackSend_${f._2}", apdl.ApdlStreamManager.apdlMainStream)
-      }
-      codegen.emitSource(apdlMain, "Main", apdl.ApdlStreamManager.apdlMainStream)
     }
+
+    // Sending data function for Arduino
+    apdl.ApdlStreamManager.functionPrintln {
+      s"""
+         |void sendData(char* data, int dataSize) {
+         |  //first we need to connect to InfluxDB server
+         |  int conState = client.connect(server, eth_port);
+         |
+         |  if (conState <= 0) { //check if connection to server is stablished
+         |    Serial.print("Could not connect to InfluxDB Server, Error #");
+         |    Serial.println(conState);
+         |    return;
+         |  }
+         |
+         |  //Send HTTP header and buffer
+         |  client.println("POST /write?db=arduino HTTP/1.1");
+         |  client.println("Host: www.embedonix.com");
+         |  client.println("User-Agent: Arduino/1.0");
+         |  client.println("Connection: close");
+         |  client.println("Content-Type: application/x-www-form-urlencoded");
+         |  client.print("Content-Length: ");
+         |  client.println(dataSize);
+         |  client.println();
+         |  client.println(data);
+         |
+         |  delay(50); //wait for server to process data
+         |
+         |  //Now we read what server has replied and then we close the connection
+         |  Serial.println("Reply from InfluxDB");
+         |  while (client.available()) { //receive char
+         |    Serial.print((char)client.read());
+         |  }
+         |  Serial.println(); //empty line
+         |
+         |  client.stop();
+         |}
+       """.stripMargin
+    }
+    inputs().foreach { f =>
+      apdl.ApdlStreamManager.setupPrintln(s"timer.every(sampling${f._2},callbackSend_${f._2});")
+      codegen.emitSource(f._1, s"callbackSend_${f._2}", apdl.ApdlStreamManager.apdlMainStream)
+    }
+    codegen.emitSource(apdlMain, "Main", apdl.ApdlStreamManager.apdlMainStream)
   }
 }
