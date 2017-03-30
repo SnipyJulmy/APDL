@@ -19,7 +19,7 @@ package object Utils {
 }
 
 package object ApdlStreamManager {
-  private val directory = new File(s"apdl-gen")
+  private val directory = new File(s"apdl-gen/apdl-gen")
   if (directory.exists()) directory.delete()
   directory.mkdirs()
   private val directoryPath = directory.getAbsolutePath
