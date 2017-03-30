@@ -2,7 +2,7 @@ package apdl.core
 
 import scala.lms.common.{BaseGenMathOps, CGenEffect, MathOpsExp}
 
-trait APDLCGenMath extends CGenEffect with BaseGenMathOps {
+trait ArduinoGenMath extends CGenEffect with BaseGenMathOps {
   val IR: MathOpsExp
 
   import IR._
