@@ -1,4 +1,4 @@
-package apdl.internal
+package apdl.core
 
 import scala.util.matching.Regex
 import scala.util.parsing.combinator.RegexParsers
@@ -32,7 +32,9 @@ class ApdlTfParser extends RegexParsers {
   def _ident: Parser[Identifier] = "[a-zA-Z][a-zA-Z0-9]*".r ^^ { x => Identifier(x) }
   def _operand: Parser[Expr] = _literal | _symbol | _parExpr
   def _parExpr: Parser[Expr] = "(" ~ _expr ~ ")" ^^ { x => x._1._2 }
-  def _expr: Parser[Expr] = _op1
+  def _expr: Parser[Expr] = _functionCall | _op1
+  def _functionCall: Parser[FunctionCall] = ???
+  def _mathFunctionCall : Parser[MathFunction] = ???
   def _op1: Parser[Expr] = {
     _op2 ~ rep("+" ~ _op2) ^^ {
       case op ~ list => list.foldLeft(op) {

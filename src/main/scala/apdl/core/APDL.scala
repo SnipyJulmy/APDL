@@ -1,6 +1,4 @@
-package apdl.example
-
-import apdl.internal._
+package apdl.core
 
 import scala.language.implicitConversions
 
@@ -42,9 +40,4 @@ trait APDL extends App {
   def serverPort(port: Int): Unit = println(s"server port : $port")
   def bufferSize(size: Int): Unit = println(s"buffer size : $size")
 
-  // implicit conversion
-  implicit def int2byte(int: Int): Byte = int.toByte
-  implicit class ApdlByte(byte: Byte) {
-    def cHex: String = "0x%02X" format byte
-  }
 }

@@ -1,5 +1,7 @@
 package apdl.example
 
+import apdl.core.APDL
+
 import scala.io.Source
 
 object Main extends APDL{
