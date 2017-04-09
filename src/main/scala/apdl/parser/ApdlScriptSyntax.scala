@@ -1,18 +1,16 @@
-package apdl.core
+package apdl.parser
 
-sealed trait ApdlTokens
+sealed trait ApdlTfSyntax
 
-sealed trait Expr extends ApdlTokens
+sealed trait Expr extends ApdlTfSyntax
 case class Add(left: Expr, right: Expr) extends Expr
 case class Mul(left: Expr, right: Expr) extends Expr
 case class Sub(left: Expr, right: Expr) extends Expr
 case class Div(left: Expr, right: Expr) extends Expr
 case class Literal(number: Number) extends Expr
-case class Constant(identifier: Identifier) extends Expr
-case class Symbol(identifier: Identifier) extends Expr
+case class Constant(name: String) extends Expr
+case class Symbol(name: String) extends Expr
 case class Number(value: String) extends Expr
-case class Identifier(name: String) extends Expr
-case class FunctionCall() extends Expr
 
 sealed trait MathFunction extends Expr
 case class Log(expr: Expr) extends MathFunction
@@ -36,16 +34,19 @@ case class Tanh(expr: Expr) extends MathFunction
 case class Sinh(expr: Expr) extends MathFunction
 case class Cosh(expr: Expr) extends MathFunction
 
-sealed trait Typ extends ApdlTokens
-case class TypInt() extends Typ
-case class TypFloat() extends Typ
-case class TypLong() extends Typ
-case class TypDouble() extends Typ
+sealed trait TfTyp extends ApdlTfSyntax
+case class TfInt() extends TfTyp
+case class TfFloat() extends TfTyp
+case class TfLong() extends TfTyp
+case class TfDouble() extends TfTyp
+case class TfVoid() extends TfTyp
 
-case class Arg(identifier: Identifier, typ: Typ) extends ApdlTokens
+case class Arg(name: String, typ: TfTyp) extends ApdlTfSyntax
 
-sealed trait Statement extends ApdlTokens
-case class Def(identifier: Identifier, args: List[Arg], retType: Typ, body: FunctionBody) extends Statement
-case class NewVal(identifier: Identifier, init: Expr, typ: Typ) extends Statement
+sealed trait Statement extends ApdlTfSyntax
+// case class TfDef(name: String, args: List[Arg], retType: TfTyp, statements: List[Statement], ret: Expr) extends Statement
+case class TfDef(name: String, args: List[Arg], retType: TfTyp, ret: Expr) extends Statement
+case class TfNewVal(name : String, typ : TfTyp, init : Expr) extends Statement
 
-case class FunctionBody(statements: List[Statement], ret: Expr) extends ApdlTokens
+
+// TODO : new val, const, etc...

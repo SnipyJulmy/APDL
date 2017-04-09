@@ -1,0 +1,14 @@
+influxdb influxdb :
+    ip 160.98.61.150
+    port 8086
+    database example
+
+source arduino1 "uno" :
+    ip 172.16.0.100
+    mac 98:4F:EE:00:81:54
+    input temp int
+    input lum int
+    send to influxdb tf temp 1000
+    send to influxdb lum 1000
+
+transform tf (x:int) -> (int) = x * 2
