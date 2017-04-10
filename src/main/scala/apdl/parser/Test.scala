@@ -12,10 +12,9 @@ object Test extends App {
 
   val code = parser.parse(parser.program, src)
   code match {
-    case Success(result, _) => {
+    case Success(result, _) =>
       println(result)
       println((new ArduinoGenerator).generate(result))
-    }
     case error: NoSuccess => println(s"error... : $error")
   }
 }
