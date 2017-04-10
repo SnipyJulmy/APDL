@@ -55,7 +55,7 @@ class ApdlParser extends RegexParsers with PackratParsers {
   def tf_def: Parser[TfDef] = {
     tf_name ~ arg_signature ~ "=" ~ tf_body ^^ {
       case (tf_name ~ arg_signature ~ "=" ~ tf_body) =>
-        TfDef(tf_name, arg_signature._1, arg_signature._2, tf_body._2)
+        TfDef(tf_name, arg_signature._1, arg_signature._2, tf_body._1, tf_body._2)
     }
   }
 
@@ -77,10 +77,12 @@ class ApdlParser extends RegexParsers with PackratParsers {
   def tf_args: Parser[List[Arg]] = tf_arg ~ rep("," ~ tf_arg) ^^ { x => x._1 :: x._2.map(_._2) }
   def tf_arg: Parser[Arg] = tf_identifier ~ ":" ~ tf_typ ^^ { case (id ~ _ ~ typ) => Arg(id, typ) }
   def tf_identifier: Parser[String] = tf_name
-  def tf_body: Parser[(List[Statement], Expr)] = tf_return ^^ { x => (List(), x) }
+  def tf_body: Parser[(List[Statement], Expr)] =
+    "{" ~> tf_statements ~ tf_return <~ "}" ^^ { x => (x._1, x._2) } |
+      tf_statements ~ tf_return ^^ { x => (x._1, x._2) }
   def tf_statements: Parser[List[Statement]] = rep(tf_statement)
   def tf_statement: Parser[Statement] = tf_new_val
-  def tf_return: Parser[Expr] = tf_expr
+  def tf_return: Parser[Expr] = ("return" ?) ~ tf_expr ^^ { expr => expr._2 }
   def tf_new_val: Parser[TfNewVal] = "val" ~ tf_identifier ~ ":" ~ tf_typ ~ "=" ~ tf_expr ^^ {
     case (_ ~ id ~ _ ~ typ ~ _ ~ init) => TfNewVal(id, typ, init)
   }
