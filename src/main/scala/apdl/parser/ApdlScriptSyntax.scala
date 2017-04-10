@@ -45,7 +45,7 @@ case class Arg(name: String, typ: TfTyp) extends ApdlTfSyntax
 
 sealed trait Statement extends ApdlTfSyntax
 // case class TfDef(name: String, args: List[Arg], retType: TfTyp, statements: List[Statement], ret: Expr) extends Statement
-case class TfDef(name: String, args: List[Arg], retType: TfTyp, ret: Expr) extends Statement
+case class TfDef(name: String, args: List[Arg], retType: TfTyp,statements : List[Statement] ,ret: Expr) extends Statement
 case class TfNewVal(name : String, typ : TfTyp, init : Expr) extends Statement
 
 
