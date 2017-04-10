@@ -12,3 +12,8 @@ source arduino1 "uno" :
     send to influxdb lum 1000
 
 transform tf (x:int) -> (int) = x * 2
+
+transform sum (x:int,y:int) -> int = {
+    val b : int = 100
+    return x + y
+}
