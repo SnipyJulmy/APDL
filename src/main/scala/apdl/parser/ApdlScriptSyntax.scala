@@ -11,6 +11,22 @@ case class Literal(number: Number) extends Expr
 case class Constant(name: String) extends Expr
 case class Symbol(name: String) extends Expr
 case class Number(value: String) extends Expr
+case class FunctionCall(funcName: String, args: List[Expr]) extends Expr
+case class IfThenElse(cond: BooleanExpr, trueBranch: Expr, falseBranch: Expr) extends Expr
+/* TODO
+    - variable (decl, assign)
+    - while
+    - for
+    - do while
+ */
+
+sealed trait BooleanExpr extends Expr
+case class True() extends BooleanExpr
+case class False() extends BooleanExpr
+case class Or(left: BooleanExpr, right: BooleanExpr) extends BooleanExpr
+case class And(left: BooleanExpr, right: BooleanExpr) extends BooleanExpr
+case class Not(booleanExpr: BooleanExpr) extends BooleanExpr
+case class BooleanSymbol(name : String) extends BooleanExpr
 
 sealed trait MathFunction extends Expr
 case class Log(expr: Expr) extends MathFunction
@@ -45,8 +61,8 @@ case class Arg(name: String, typ: TfTyp) extends ApdlTfSyntax
 
 sealed trait Statement extends ApdlTfSyntax
 // case class TfDef(name: String, args: List[Arg], retType: TfTyp, statements: List[Statement], ret: Expr) extends Statement
-case class TfDef(name: String, args: List[Arg], retType: TfTyp,statements : List[Statement] ,ret: Expr) extends Statement
-case class TfNewVal(name : String, typ : TfTyp, init : Expr) extends Statement
+case class TfDef(name: String, args: List[Arg], retType: TfTyp, statements: List[Statement], ret: Expr) extends Statement
+case class TfNewVal(name: String, typ: TfTyp, init: Expr) extends Statement
 
 
 // TODO : new val, const, etc...
