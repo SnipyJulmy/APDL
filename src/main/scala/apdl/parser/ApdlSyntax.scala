@@ -12,19 +12,19 @@ case class GenericSource(name: String, id: BoardId, mac: Mac, ip: Ip, inputs: Li
 case class BoardId(id: String)
 
 sealed trait ApdlInput
-case class GenericInput(name: String, typ: Typ) extends ApdlInput
+case class GenericInput(name: String, typ: ApdlTyp) extends ApdlInput
 
-case class Transformater(function: TfDef) extends Entity
+case class Transformater(function: FunctionDecl) extends Entity
 
 sealed trait Send
 case class GenericSend(target: String, input: String, sampling: Int) extends Send
 case class TfSend(target: String, tf: String, input: String, sampling: Int) extends Send
 
-sealed trait Typ
-case class int() extends Typ
-case class float() extends Typ
-case class double() extends Typ
-case class long() extends Typ
+sealed trait ApdlTyp
+case class ApdlInt() extends ApdlTyp
+case class ApdlFloat() extends ApdlTyp
+case class ApdlDouble() extends ApdlTyp
+case class ApdlLong() extends ApdlTyp
 
 sealed trait Property
 case class GenericProperty(key: String, value: String) extends Property
