@@ -66,13 +66,14 @@ case class TfVoid() extends TfRetTyp
 
 case class TypedIdentifier(name: String, typ: TfPrimitivesTyp)
 
-sealed trait Declaration extends ApdlTfSyntax
+sealed trait Declaration extends Statement
 case class FunctionDecl(header: FunctionHeader, body: FunctionBody) extends Declaration
 case class FunctionHeader(resultType: TfRetTyp, identifier: String, parameters: List[TypedIdentifier])
 case class FunctionBody(body: Block)
 
 case class NewVal(identifier: String, typ: TfTyp, init: Expr) extends Declaration
 case class NewVar(identifier: String, typ: TfTyp, init: Option[Expr]) extends Declaration
+
 case class NewArray(identifier: String, typ: TfArray, init: ArrayInit) extends Declaration
 case class ArrayInit(values : List[TypedIdentifier])
 

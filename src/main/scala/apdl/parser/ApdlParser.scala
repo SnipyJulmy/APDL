@@ -121,9 +121,10 @@ class ApdlParser extends RegexParsers with PackratParsers {
       tf_term
   }
 
+  // TODO explain in report evaluation order
   def tf_term: Parser[Expr] = {
     tf_factor ~ "*" ~ tf_term ^^ { case (l ~ _ ~ r) => Mul(l, r) } |
-      tf_factor ~ "/" ~ tf_term ^^ { case (l ~ _ ~ r) => Sub(l, r) } |
+      tf_factor ~ "/" ~ tf_term ^^ { case (l ~ _ ~ r) => Div(l, r) } |
       tf_factor
   }
 
@@ -181,7 +182,7 @@ class ApdlParser extends RegexParsers with PackratParsers {
   }
 
   def tf_statement: Parser[Statement] = {
-    tf_assign | tf_block | tf_loop | tf_jump | tf_expr_statement
+    tf_new_val | tf_assign | tf_block | tf_loop | tf_jump | tf_expr_statement
   }
   def tf_expr_statement: Parser[ExpressionStatement] = tf_expr ^^ { expr => ExpressionStatement(expr) }
   def tf_loop: Parser[Statement] = tf_while | tf_dowhile

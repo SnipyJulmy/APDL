@@ -1,5 +1,6 @@
 transform def tf (x:int) -> int {
-    return x + 3 - 2
+    val a : int = 4
+    return x * 3 / a
 }
 
 transform def af (x:int) -> int {
