@@ -12,13 +12,10 @@ case class Constant(name: String) extends Expr
 case class Symbol(name: String) extends Expr
 case class Number(value: String) extends Expr
 case class FunctionCall(funcName: String, args: List[Expr]) extends Expr
-case class IfThenElse(cond: BooleanExpr, trueBranch: Expr, falseBranch: Expr) extends Expr
-/* TODO
-    - variable (decl, assign)
-    - while
-    - for
-    - do while
- */
+
+sealed trait Assignement extends Statement
+case class VarAssignement(name: String, value: Expr) extends Assignement
+case class ArrayAssignement(name : String, field : Expr, value : Expr) extends Assignement
 
 sealed trait BooleanExpr extends Expr
 case class True() extends BooleanExpr
@@ -26,7 +23,7 @@ case class False() extends BooleanExpr
 case class Or(left: BooleanExpr, right: BooleanExpr) extends BooleanExpr
 case class And(left: BooleanExpr, right: BooleanExpr) extends BooleanExpr
 case class Not(booleanExpr: BooleanExpr) extends BooleanExpr
-case class BooleanSymbol(name : String) extends BooleanExpr
+case class BooleanSymbol(name: String) extends BooleanExpr
 
 sealed trait MathFunction extends Expr
 case class Log(expr: Expr) extends MathFunction
@@ -50,19 +47,43 @@ case class Tanh(expr: Expr) extends MathFunction
 case class Sinh(expr: Expr) extends MathFunction
 case class Cosh(expr: Expr) extends MathFunction
 
-sealed trait TfTyp extends ApdlTfSyntax
-case class TfInt() extends TfTyp
-case class TfFloat() extends TfTyp
-case class TfLong() extends TfTyp
-case class TfDouble() extends TfTyp
-case class TfVoid() extends TfTyp
+sealed trait TfRetTyp
+sealed trait TfTyp extends TfRetTyp
+sealed trait TfPrimitivesTyp extends TfTyp
+sealed trait TfNumericTyp extends TfPrimitivesTyp
+sealed trait TfIntegralTyp extends TfNumericTyp
+sealed trait TfFloatingPointTyp extends TfNumericTyp
+case class TfBoolean() extends TfPrimitivesTyp
+case class TfInt() extends TfIntegralTyp
+case class TfLong() extends TfIntegralTyp
+case class TfByte() extends TfIntegralTyp
+case class TfShort() extends TfIntegralTyp
+case class TfChar() extends TfIntegralTyp
+case class TfDouble() extends TfFloatingPointTyp
+case class TfFloat() extends TfFloatingPointTyp
+case class TfArray(typ: TfTyp) extends TfTyp
+case class TfVoid() extends TfRetTyp
 
-case class Arg(name: String, typ: TfTyp) extends ApdlTfSyntax
+case class TypedIdentifier(name: String, typ: TfPrimitivesTyp)
+
+sealed trait Declaration extends ApdlTfSyntax
+case class FunctionDecl(header: FunctionHeader, body: FunctionBody) extends Declaration
+case class FunctionHeader(resultType: TfRetTyp, identifier: String, parameters: List[TypedIdentifier])
+case class FunctionBody(body: Block)
+
+case class NewVal(identifier: String, typ: TfTyp, init: Expr) extends Declaration
+case class NewVar(identifier: String, typ: TfTyp, init: Option[Expr]) extends Declaration
+case class NewArray(identifier: String, typ: TfArray, init: ArrayInit) extends Declaration
+case class ArrayInit(values : List[TypedIdentifier])
+
 
 sealed trait Statement extends ApdlTfSyntax
-// case class TfDef(name: String, args: List[Arg], retType: TfTyp, statements: List[Statement], ret: Expr) extends Statement
-case class TfDef(name: String, args: List[Arg], retType: TfTyp, statements: List[Statement], ret: Expr) extends Statement
-case class TfNewVal(name: String, typ: TfTyp, init: Expr) extends Statement
-
-
-// TODO : new val, const, etc...
+case class ExpressionStatement(expression: Expr) extends Statement
+case class While(cond: BooleanExpr, statement: Statement) extends Statement
+case class DoWhile(cond: BooleanExpr, statement: Statement) extends Statement
+case class IfThenElse(cond: BooleanExpr, trueBranch: Statement, falseBranch: Statement) extends Statement
+case class IfThen(cond: BooleanExpr, ifTrue: Statement) extends Statement
+case class Return(expr: Expr) extends Statement
+case class Break() extends Statement
+case class Continue() extends Statement
+case class Block(statements: List[Statement]) extends Statement
