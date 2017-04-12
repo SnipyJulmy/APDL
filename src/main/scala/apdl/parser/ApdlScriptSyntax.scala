@@ -8,14 +8,9 @@ case class Sub(left: Expr, right: Expr) extends Expr
 case class Div(left: Expr, right: Expr) extends Expr
 
 case class Literal(number: Number) extends Expr
-case class Constant(name: String) extends Expr
 case class Symbol(name: String) extends Expr
 case class Number(value: String) extends Expr
 case class FunctionCall(funcName: String, args: List[Expr]) extends Expr
-
-sealed trait Assignement extends Statement
-case class VarAssignement(name: String, value: Expr) extends Assignement
-case class ArrayAssignement(name: String, field: Expr, value: Expr) extends Assignement
 
 sealed trait BooleanExpr extends Expr
 case class True() extends BooleanExpr
@@ -72,6 +67,10 @@ case class Break() extends Statement
 case class Continue() extends Statement
 case class Block(statements: List[Statement]) extends Statement
 
+sealed trait Assignement extends Statement
+case class VarAssignement(name: String, value: Expr) extends Assignement
+case class ArrayAssignement(name: String, field: Expr, value: Expr) extends Assignement
+
 // Companion object
 
 object Add {
@@ -81,8 +80,8 @@ object Add {
   def apply(l: Expr, r: AnyVal): Add = new Add(l, Literal(Number(r.toString)))
   def apply(l: AnyVal, r: Expr): Add = new Add(Literal(Number(l.toString)), r)
   def apply(l: Expr, r: String): Add = new Add(l, Symbol(r))
-  def apply(l: String, r: Expr): Add = new Add(Symbol("l"), r)
-  def apply(l: String, r: String): Add = new Add(Symbol("l"), Symbol("r"))
+  def apply(l: String, r: Expr): Add = new Add(Symbol(l), r)
+  def apply(l: String, r: String): Add = new Add(Symbol(l), Symbol(r))
 }
 
 object Mul {
@@ -92,8 +91,8 @@ object Mul {
   def apply(l: Expr, r: AnyVal): Mul = new Mul(l, Literal(Number(r.toString)))
   def apply(l: AnyVal, r: Expr): Mul = new Mul(Literal(Number(l.toString)), r)
   def apply(l: Expr, r: String): Mul = new Mul(l, Symbol(r))
-  def apply(l: String, r: Expr): Mul = new Mul(Symbol("l"), r)
-  def apply(l: String, r: String): Mul = new Mul(Symbol("l"), Symbol("r"))
+  def apply(l: String, r: Expr): Mul = new Mul(Symbol(l), r)
+  def apply(l: String, r: String): Mul = new Mul(Symbol(l), Symbol(r))
 }
 
 object Sub {
@@ -103,8 +102,8 @@ object Sub {
   def apply(l: Expr, r: AnyVal): Sub = new Sub(l, Literal(Number(r.toString)))
   def apply(l: AnyVal, r: Expr): Sub = new Sub(Literal(Number(l.toString)), r)
   def apply(l: Expr, r: String): Sub = new Sub(l, Symbol(r))
-  def apply(l: String, r: Expr): Sub = new Sub(Symbol("l"), r)
-  def apply(l: String, r: String): Sub = new Sub(Symbol("l"), Symbol("r"))
+  def apply(l: String, r: Expr): Sub = new Sub(Symbol(l), r)
+  def apply(l: String, r: String): Sub = new Sub(Symbol(l), Symbol(r))
 }
 
 object Div {
@@ -114,6 +113,6 @@ object Div {
   def apply(l: Expr, r: AnyVal): Div = new Div(l, Literal(Number(r.toString)))
   def apply(l: AnyVal, r: Expr): Div = new Div(Literal(Number(l.toString)), r)
   def apply(l: Expr, r: String): Div = new Div(l, Symbol(r))
-  def apply(l: String, r: Expr): Div = new Div(Symbol("l"), r)
-  def apply(l: String, r: String): Div = new Div(Symbol("l"), Symbol("r"))
+  def apply(l: String, r: Expr): Div = new Div(Symbol(l), r)
+  def apply(l: String, r: String): Div = new Div(Symbol(l), Symbol(r))
 }
