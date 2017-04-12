@@ -63,7 +63,6 @@ class ArduinoGenerator extends ApdlBackendGenerator {
     case Sub(left, right) => s"(${generate(left)} - ${generate(right)})"
     case Div(left, right) => s"(${generate(left)} / ${generate(right)})"
     case Literal(number) => s"${generate(number)}"
-    case Constant(name) => s" $name "
     case Symbol(name) => s" $name "
     case Number(value) => s" $value "
     case FunctionCall(funcName, args) => s"$funcName(${args map generate mkString ","})"
