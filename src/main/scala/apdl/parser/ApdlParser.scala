@@ -222,7 +222,10 @@ class ApdlParser extends RegexParsers with PackratParsers {
     tf_break | tf_continue | tf_return
   }
 
-  lazy val tf_return: PackratParser[Return] = "return" ~ tf_expr ^^ { expr => Return(expr._2) }
+  lazy val tf_return: PackratParser[Return] = {
+    "return" ~> tf_boolean_expr ^^ {expr => Return(expr)} |
+    "return" ~> tf_expr ^^ { expr => Return(expr) }
+  }
   lazy val tf_break: PackratParser[Break] = "break" ^^ { _ => Break() }
   lazy val tf_continue: PackratParser[Continue] = "continue" ^^ { _ => Continue() }
 
