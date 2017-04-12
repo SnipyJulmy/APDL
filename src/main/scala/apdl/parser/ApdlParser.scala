@@ -99,7 +99,7 @@ class ApdlParser extends RegexParsers with PackratParsers {
 
   // Types
   lazy val tf_ret_type: PackratParser[TfRetTyp] = tf_void | tf_typ
-  lazy val tf_typ: PackratParser[TfTyp] = tf_primitives_typ | tf_array_typ
+  lazy val tf_typ: PackratParser[TfTyp] = tf_array_typ | tf_primitives_typ
   lazy val tf_primitives_typ: PackratParser[TfPrimitivesTyp] = tf_boolean_typ | tf_numeric_typ
   lazy val tf_boolean_typ: PackratParser[TfBoolean] = "bool" ^^ { _ => TfBoolean() }
   lazy val tf_numeric_typ: PackratParser[TfNumericTyp] = tf_integral_typ | tf_floating_point_typ
