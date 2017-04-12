@@ -8,6 +8,10 @@ scala :
 jdk :
   - oraclejdk8
 
+branches :
+  except :
+    - dev
+
 cache:
   directories:
     - $HOME/.ivy2/cache
