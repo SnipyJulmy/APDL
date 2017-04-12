@@ -231,19 +231,16 @@ class ApdlParser extends RegexParsers with PackratParsers {
   lazy val lb = "{"
   lazy val rb = "}"
 
-  lazy val tf_par_boolean_expr: PackratParser[BooleanExpr] = lp ~> tf_boolean_expr <~ rp
-  lazy val tf_boolean_expr: PackratParser[BooleanExpr] = {
-    tf_boolean_term ~ "&&" ~ tf_boolean_expr ^^ { case (l ~ _ ~ r) => And(l, r) } |
+   lazy val tf_boolean_expr: PackratParser[BooleanExpr] =
+    tf_boolean_expr ~ ("||" ~> tf_boolean_term) ^^ { case (t ~ f) => Or(t, f) } |
       tf_boolean_term
-  }
 
-  lazy val tf_boolean_term: PackratParser[BooleanExpr] = {
-    tf_boolean_factor ~ "||" ~ tf_boolean_term ^^ { case (l ~ _ ~ r) => Or(l, r) } |
+  lazy val tf_boolean_term: PackratParser[BooleanExpr] =
+    tf_boolean_term ~ ("&&" ~> tf_boolean_factor) ^^ { case (t ~ f) => And(t, f) } |
       tf_boolean_factor
-  }
 
   lazy val tf_boolean_factor: PackratParser[BooleanExpr] = {
-    tf_relational_expr | bool_not | bool_literal | bool_symbol | tf_par_boolean_expr
+    tf_relational_expr | bool_not | bool_literal | bool_symbol | lp ~> tf_boolean_expr <~ rp
   }
 
   lazy val tf_relational_expr: PackratParser[BooleanExpr] = {
