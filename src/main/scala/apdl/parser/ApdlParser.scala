@@ -51,7 +51,7 @@ class ApdlParser extends RegexParsers with PackratParsers {
   def input_name: Parser[String] = "[a-zA-Z_][a-zA-Z0-9_]*".r ^^ { str => str }
 
   def transform: Parser[Transformater] = {
-    "transform" ~ tf_def ^^ { case (_ ~ tf_def) => Transformater(tf_def) }
+    "transform" ~ tf_def ^^ { case (_ ~ _tf_def) => Transformater(_tf_def) }
   }
 
 
@@ -154,7 +154,7 @@ class ApdlParser extends RegexParsers with PackratParsers {
     lb ~> tf_return <~ rb ^^ { ret => (Nil, Nil, ret) } |
       lb ~> rep(tf_decl | tf_statement) ~ tf_return <~ rb ^^ { body =>
         val declarations = body._1.filter(_.isInstanceOf[Declaration]).map(_.asInstanceOf[Declaration])
-        val statements = body._1.filter(_.isInstanceOf[Statement]).map(_.asInstanceOf[Statement])
+        val statements = body._1.filterNot(_.isInstanceOf[Declaration])
         (declarations, statements, body._2)
       }
   }
