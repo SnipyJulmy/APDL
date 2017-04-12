@@ -72,7 +72,6 @@ class ArduinoGenerator extends ApdlBackendGenerator {
       case Or(left, right) => s"(${generate(left)} || ${generate(right)})"
       case And(left, right) => s"(${generate(left)} && ${generate(right)})"
       case Not(bool_expr) => s"!(${generate(bool_expr)})"
-      case BooleanSymbol(name) => s"$name"
       case Greater(left, right) => s"${generate(left)} > ${generate(right)}"
       case Smaller(left, right) => s"${generate(left)} < ${generate(right)}"
       case GreaterEquals(left, right) => s"${generate(left)} >= ${generate(right)}"

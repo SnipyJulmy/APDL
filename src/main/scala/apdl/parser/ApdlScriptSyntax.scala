@@ -8,7 +8,7 @@ case class Sub(left: Expr, right: Expr) extends Expr
 case class Div(left: Expr, right: Expr) extends Expr
 
 case class Literal(number: Number) extends Expr
-case class Symbol(name: String) extends Expr
+case class Symbol(name: String) extends Expr with BooleanExpr
 case class Number(value: String) extends Expr
 case class FunctionCall(funcName: String, args: List[Expr]) extends Expr
 
@@ -18,7 +18,6 @@ case class False() extends BooleanExpr
 case class Or(left: BooleanExpr, right: BooleanExpr) extends BooleanExpr
 case class And(left: BooleanExpr, right: BooleanExpr) extends BooleanExpr
 case class Not(booleanExpr: BooleanExpr) extends BooleanExpr
-case class BooleanSymbol(name: String) extends BooleanExpr
 case class Greater(left: Expr, right: Expr) extends BooleanExpr
 case class Smaller(left: Expr, right: Expr) extends BooleanExpr
 case class GreaterEquals(left: Expr, right: Expr) extends BooleanExpr
@@ -68,7 +67,7 @@ case class Continue() extends Statement
 case class Block(statements: List[Statement]) extends Statement
 
 sealed trait Assignement extends Statement
-case class VarAssignement(name: String, value: Expr) extends Assignement
+case class VarAssignement(symbol: Symbol, value: Expr) extends Assignement
 case class ArrayAssignement(name: String, field: Expr, value: Expr) extends Assignement
 
 // Companion object

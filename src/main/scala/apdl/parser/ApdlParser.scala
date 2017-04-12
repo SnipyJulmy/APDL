@@ -169,7 +169,7 @@ class ApdlParser extends RegexParsers with PackratParsers {
   }
 
   lazy val tf_assign: PackratParser[Assignement] = tf_var_assign | tf_array_assign
-  lazy val tf_var_assign: PackratParser[VarAssignement] = tf_identifier ~ "=" ~ tf_expr ^^ { case (id ~ _ ~ expr) => VarAssignement(id, expr) }
+  lazy val tf_var_assign: PackratParser[VarAssignement] = tf_identifier ~ "=" ~ tf_expr ^^ { case (id ~ _ ~ expr) => VarAssignement(Symbol(id), expr) }
   lazy val tf_array_assign: PackratParser[ArrayAssignement] = {
     tf_identifier ~ "[" ~ tf_expr ~ "]" ~ "=" ~ tf_expr ^^ { case (id ~ _ ~ field ~ _ ~ _ ~ expr) => ArrayAssignement(id, field, expr) }
   }
@@ -254,7 +254,7 @@ class ApdlParser extends RegexParsers with PackratParsers {
 
   lazy val bool_literal: PackratParser[BooleanExpr] = tf_true | tf_false
   lazy val bool_not: PackratParser[Not] = "!" ~ tf_boolean_expr ^^ { bool => Not(bool._2) }
-  lazy val bool_symbol: PackratParser[BooleanSymbol] = tf_identifier ^^ { id => BooleanSymbol(id) }
+  lazy val bool_symbol: PackratParser[Symbol] = tf_identifier ^^ { id => Symbol(id) }
 
   lazy val tf_true: PackratParser[True] = "true" ^^ { _ => True() }
   lazy val tf_false: PackratParser[False] = "false" ^^ { _ => False() }
