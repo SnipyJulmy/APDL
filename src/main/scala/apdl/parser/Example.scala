@@ -5,7 +5,7 @@ import java.io.File
 import scala.language.postfixOps
 import scala.util.parsing.input.CharSequenceReader
 
-object Test extends App {
+object Example extends App {
   val src = scala.io.Source.fromFile(new File(s"src/main/resources/example.apdl")) mkString
   val parser = new ApdlParser
 
