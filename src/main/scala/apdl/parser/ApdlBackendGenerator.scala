@@ -74,28 +74,12 @@ class ArduinoGenerator extends ApdlBackendGenerator {
       case And(left, right) => s"(${generate(left)} && ${generate(right)})"
       case Not(bool_expr) => s"!(${generate(bool_expr)})"
       case BooleanSymbol(name) => s"$name"
-    }
-    case m: MathFunction => m match {
-      case Log(operand) => s"(log(${generate(operand)}))"
-      case Log10(operand) => s"(log10(${generate(operand)}))"
-      case Sin(operand) => s"(sin(${generate(operand)}))"
-      case Cos(operand) => s"(cos(${generate(operand)}))"
-      case Tan(operand) => s"(tan(${generate(operand)}))"
-      case Asin(operand) => s"(asin(${generate(operand)}))"
-      case Acos(operand) => s"(acos(${generate(operand)}))"
-      case Atan(operand) => s"(atan(${generate(operand)}))"
-      case Exp(operand) => s"(exp(${generate(operand)}))"
-      case Sqrt(operand) => s"(sqrt(${generate(operand)}))"
-      case Ceil(operand) => s"(ceil(${generate(operand)}))"
-      case Floor(operand) => s"(floor(${generate(operand)}))"
-      case Pow(n, power) => s"(pow(${generate(n)},${generate(power)}))"
-      case Round(operand) => s"(round(${generate(operand)}))"
-      case Abs(operand) => s"(abs(${generate(operand)}))"
-      case Max(left, right) => s"(max(${generate(left)},${generate(right)}))"
-      case Min(left, right) => s"(min(${generate(left)},${generate(right)}))"
-      case Tanh(operand) => s"(tanh(${generate(operand)}))"
-      case Sinh(operand) => s"(sinh(${generate(operand)}))"
-      case Cosh(operand) => s"(cosh(${generate(operand)}))"
+      case Greater(left, right) => s"${generate(left)} > ${generate(right)}"
+      case Smaller(left, right) => s"${generate(left)} < ${generate(right)}"
+      case GreaterEquals(left, right) => s"${generate(left)} >= ${generate(right)}"
+      case SmallerEquals(left, right) => s"${generate(left)} <= ${generate(right)}"
+      case Equals(left, right) => s"${generate(left)} == ${generate(right)}"
+      case NotEquals(left, right) => s"${generate(left)} != ${generate(right)}"
     }
   }
 
@@ -136,6 +120,7 @@ class ArduinoGenerator extends ApdlBackendGenerator {
          |do ${generate(loopBody)} while (${generate(cond)});
        """.stripMargin
     case VarAssignement(name, newVar) => s"$name = ${generate(newVar)};"
+    case ArrayAssignement(id, field, value) => s"$id[${generate(field)}] = ${generate(value)};"
     case IfThenElse(cond, trueBranch, falseBranch) =>
       s"""
          | if(${generate(cond)}) ${generate(trueBranch)} else ${generate(falseBranch)}
@@ -150,12 +135,9 @@ class ArduinoGenerator extends ApdlBackendGenerator {
     case Block(statements) => statements match {
       case Nil => ""
       case _ =>
-        s"""
-           |{
-           |  ${statements map generate mkString "\n"}
-           |}
-         """.
-          stripMargin
+        s"""|{
+            |  ${statements map generate mkString "\n"}
+            |}""".stripMargin
     }
     case d: Declaration => generate(d)
   }
@@ -163,9 +145,8 @@ class ArduinoGenerator extends ApdlBackendGenerator {
   def generate(declaration: Declaration): String = declaration match {
     case FunctionDecl(FunctionHeader(resultType, identifier, parameters), FunctionBody(body)) =>
       s"""
-         |${generate(resultType)} $identifier (${generateParameters(parameters)}) {
+         |${generate(resultType)} $identifier (${generateParameters(parameters)})
          |  ${generate(body)}
-         |}
        """.stripMargin
     case NewVal(name, typ, init) =>
       s"const ${generate(typ)} $name = ${generate(init)};"
