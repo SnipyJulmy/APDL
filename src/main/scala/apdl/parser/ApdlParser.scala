@@ -98,22 +98,22 @@ class ApdlParser extends RegexParsers with PackratParsers {
   /* Transformater script syntax */
 
   // Types
-  def tf_ret_type: Parser[TfRetTyp] = tf_void | tf_typ
-  def tf_typ: Parser[TfTyp] = tf_primitives_typ | tf_array_typ
-  def tf_primitives_typ: Parser[TfPrimitivesTyp] = tf_boolean_typ | tf_numeric_typ
-  def tf_boolean_typ: Parser[TfBoolean] = "bool" ^^ { _ => TfBoolean() }
-  def tf_numeric_typ: Parser[TfNumericTyp] = tf_integral_typ | tf_floating_point_typ
-  def tf_integral_typ: Parser[TfIntegralTyp] = tf_int | tf_short | tf_long | tf_byte | tf_char
-  def tf_int: Parser[TfInt] = "int" ^^ { _ => TfInt() }
-  def tf_long: Parser[TfLong] = "long" ^^ { _ => TfLong() }
-  def tf_byte: Parser[TfByte] = "byte" ^^ { _ => TfByte() }
-  def tf_short: Parser[TfShort] = "short" ^^ { _ => TfShort() }
-  def tf_char: Parser[TfChar] = "char" ^^ { _ => TfChar() }
-  def tf_floating_point_typ: Parser[TfFloatingPointTyp] = tf_float | tf_double
-  def tf_float: Parser[TfFloat] = "float" ^^ { _ => TfFloat() }
-  def tf_double: Parser[TfDouble] = "double" ^^ { _ => TfDouble() }
-  def tf_array_typ: Parser[TfArray] = tf_typ <~ "[" ~ "]" ^^ { typ => TfArray(typ) }
-  def tf_void: Parser[TfVoid] = "void" ^^ { _ => TfVoid() }
+  lazy val tf_ret_type: PackratParser[TfRetTyp] = tf_void | tf_typ
+  lazy val tf_typ: PackratParser[TfTyp] = tf_primitives_typ | tf_array_typ
+  lazy val tf_primitives_typ: PackratParser[TfPrimitivesTyp] = tf_boolean_typ | tf_numeric_typ
+  lazy val tf_boolean_typ: PackratParser[TfBoolean] = "bool" ^^ { _ => TfBoolean() }
+  lazy val tf_numeric_typ: PackratParser[TfNumericTyp] = tf_integral_typ | tf_floating_point_typ
+  lazy val tf_integral_typ: PackratParser[TfIntegralTyp] = tf_int | tf_short | tf_long | tf_byte | tf_char
+  lazy val tf_int: PackratParser[TfInt] = "int" ^^ { _ => TfInt() }
+  lazy val tf_long: PackratParser[TfLong] = "long" ^^ { _ => TfLong() }
+  lazy val tf_byte: PackratParser[TfByte] = "byte" ^^ { _ => TfByte() }
+  lazy val tf_short: PackratParser[TfShort] = "short" ^^ { _ => TfShort() }
+  lazy val tf_char: PackratParser[TfChar] = "char" ^^ { _ => TfChar() }
+  lazy val tf_floating_point_typ: PackratParser[TfFloatingPointTyp] = tf_float | tf_double
+  lazy val tf_float: PackratParser[TfFloat] = "float" ^^ { _ => TfFloat() }
+  lazy val tf_double: PackratParser[TfDouble] = "double" ^^ { _ => TfDouble() }
+  lazy val tf_array_typ: PackratParser[TfArray] = tf_typ <~ "[" ~ "]" ^^ { typ => TfArray(typ) }
+  lazy val tf_void: PackratParser[TfVoid] = "void" ^^ { _ => TfVoid() }
 
   // Expressions
 
