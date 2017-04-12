@@ -142,17 +142,16 @@ class TfExpressionTest extends FlatSpec {
   assertAst("-123", Literal(Number("-123")))
   assertAst("+123", Literal(Number("+123")))
 
-  val a = BooleanSymbol("a")
-  val b = BooleanSymbol("b")
-  val c = BooleanSymbol("c")
+  val a = Symbol("a")
+  val b = Symbol("b")
+  val c = Symbol("c")
 
   /* Boolean expression AST test */
   assertBooleanAst("true", True())
   assertBooleanAst("false", False())
-  assertBooleanAst("a || true", Or(BooleanSymbol("a"),True()))
-  assertBooleanAst("false && b", And(False(),BooleanSymbol("b")))
-  assertBooleanAst("!c", Not(BooleanSymbol("c")))
-  assertBooleanAst("x", BooleanSymbol("x"))
+  assertBooleanAst("a || true", Or(Symbol("a"),True()))
+  assertBooleanAst("false && b", And(False(),Symbol("b")))
+  assertBooleanAst("!c", Not(Symbol("c")))
   assertBooleanAst("5 < 4",Smaller(Literal(Number("5")),Literal(Number("4"))))
   assertBooleanAst("7 > 8",Greater(Literal(Number("7")),Literal(Number("8"))))
   assertBooleanAst("x == b",Equals(Symbol("x"),Symbol("b")))
@@ -162,6 +161,9 @@ class TfExpressionTest extends FlatSpec {
   assertBooleanAst("3 * x > log(10)",Greater(Mul(3,"x"),FunctionCall("log",List(Literal(Number("10"))))))
   assertBooleanAst("3 * x > 5 && x < 10",And(Greater(Mul(3,"x"),Literal(Number("5"))),Smaller(Symbol("x"),Literal(Number("10")))))
   assertBooleanAst("a && b && c",And(And(a,b),c))
+  assertBooleanAst("a || b && c",Or(a,And(b,c)))
+  assertBooleanAst("a || b || c",Or(Or(a,b),c))
+  assertBooleanAst("(a || b) && c",And(Or(a,b),c))
 
   /* Equiv expr */
   assertEquivExpr("x*2","(x*2)")
