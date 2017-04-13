@@ -7,7 +7,6 @@ scala :
 
 jdk :
   - oraclejdk8
-  - openjdk8
 
 branches :
   except :
