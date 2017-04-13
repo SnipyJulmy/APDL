@@ -18,43 +18,161 @@ class ArduinoGenerator extends ApdlBackendGenerator {
     val sources = entities.filter(_.isInstanceOf[Source]).map(_.asInstanceOf[Source])
     val transformaters = entities.filter(_.isInstanceOf[Transformater]).map(_.asInstanceOf[Transformater])
 
+    // Pre-generation
+
+    function write apdlArduinoUtilityFunction
+
+    // generate transformater
+    transformaters.foreach { tf =>
+      function write generate(tf.function)
+    }
+
+
     // generate servers info
     // the database is global or not for all server ?
+    // TODO multiple server
     servers.foreach {
-      case InfluxDb(name, prop) => header.write {
-        s"""
-           |IPAddress ${name}_ip(${prop.ip.address mkString ","});
-           |const int ${name}_port = ${prop.port.number};
-           |const char* ${name}_database_name = "${prop.database.name}";
+      case InfluxDb(name, prop) =>
+        header.write {
+          s"""
+             |IPAddress ${name}_ip(${prop.ip.address mkString ","});
+             |const int ${name}_port = ${prop.port.number};
+             |const char* ${name}_database_name = "${prop.database.name}";
+             |const char* ${name}_database_name_eth = "${prop.database.name},";
          """.stripMargin
-      }
+        }
     }
 
     // generate sources info
     // TODO multiple source for now, assume just one
     assert(sources.length == 1)
     sources.foreach {
-      case GenericSource(name, id, mac, ip, inputs, sends) => header.write {
-        s"""
-           |IPAddress ${name}_ip(${ip.address mkString ","});
-           |byte ${name}_mac[] {${mac.address.map(value => s"0x$value") mkString ","}};
+      case GenericSource(name, id, mac, ip, inputs, sends) =>
+        header.write {
+          s"""
+             |IPAddress ${name}_ip(${ip.address mkString ","});
+             |byte ${name}_mac[] {${mac.address.map(value => s"0x$value") mkString ","}};
          """.stripMargin
-      }
+        }
+        inputs.foreach {
+          case GenericInput(_, _) =>
+            throw new ApdlDslException("""Arduino don't support generic input, use the "from pin" functionality""")
+          case PinInput(n, typ, pin) =>
+            header.write(s"${generate(typ)} ${n}_pin = $pin;\n")
+        }
+        sends.foreach {
+          case GenericSend(target, input, sampling) =>
+            println(s"send $input to $target")
+            val _input = {
+              inputs.find {
+                case _: GenericInput =>
+                  throw new ApdlDslException("""Arduino don't support generic input, use the "from pin" functionality""")
+                case PinInput(n, _, _) => n == input
+              } match {
+                case Some(value) => value.asInstanceOf[PinInput]
+                case None =>
+                  throw new ApdlDslException(s"""No input $input found for send""")
+              }
+            }
+
+            val _target = {
+              servers.find {
+                case InfluxDb(n, _) => n == target
+              } match {
+                case Some(value) => value
+                case None => throw new ApdlDslException(s"""No target server $target found for send""")
+              }
+            }
+
+            val dbName = _target match {
+              case InfluxDb(n, prop) => s"${n}_database_name_eth"
+            }
+
+            function.write {
+              s"""
+                 |void send_${_input.name}() {
+                 |  ${generate(_input.typ)} data = analogRead(${_input.name}_pin);
+                 |  int numChars = 0;
+                 |  numChars = sprintf(buf,$dbName);
+                 |  numChars += sprintf(&buf[numChars],"SOURCE=$name ");
+                 |  numChars += sprintf(&buf[numChars],"$input=${cFormat(_input.typ)},");
+                 |  sendData(buf,numChars);
+                 |  memset(buf,'\\0',buffersSize);
+                 |  // delay(1000); // some small delay
+                 |}
+             """.stripMargin
+            }
+
+          case TfSend(target, tf, input, sampling) =>
+            val _input = {
+              inputs.find {
+                case _: GenericInput =>
+                  throw new ApdlDslException("""Arduino don't support generic input, use the "from pin" functionality""")
+                case PinInput(n, _, _) => n == input
+              } match {
+                case Some(value) => value.asInstanceOf[PinInput]
+                case None =>
+                  throw new ApdlDslException(s"""No input $input found for send""")
+              }
+            }
+
+            val _target = {
+              servers.find {
+                case InfluxDb(n, _) => n == target
+              } match {
+                case Some(value) => value
+                case None => throw new ApdlDslException(s"""No target server $target found for send""")
+              }
+            }
+
+            val dbName = _target match {
+              case InfluxDb(n, prop) => s"${n}_database_name_eth"
+            }
+
+            val _tf = transformaters.find(t => t.function.header.identifier == tf).get
+
+            function.write {
+              s"""
+                 |void send_${_input.name}() {
+                 |  ${generate(_input.typ)} rawData = analogRead(${_input.name}_pin);
+                 |  ${generate(_tf.function.header.resultType)} data = $tf(rawData);
+                 |  int numChars = 0;
+                 |  numChars = sprintf(buf,$dbName);
+                 |  numChars += sprintf(&buf[numChars],"SOURCE=$name ");
+                 |  numChars += sprintf(&buf[numChars],"$input=${cFormat(_input.typ)},");
+                 |  sendData(buf,numChars);
+                 |  memset(buf,'\\0',buffersSize);
+                 |  // delay(1000); // some small delay
+                 |}
+             """.stripMargin
+            }
+        }
     }
 
-    // generate transformater
-    transformaters.foreach { tf =>
-      function.write {
-        generate(tf.function)
-      }
-    }
-
-    println(s"$main \n $header \n $function \n $loop \n $setup")
-
-    // TODO include previous StringWriter
     s"""
+       |#include <Ethernet.h>
+       |#include <Timer.h>
        |
+       |EthernetClient client;
+       |Timer timer;
+       |
+       |const int bufferSize = 2048;
+       |char buf[bufferSize] = {'\0'};
+       |
+       |$header
+       |
+       |$function
      """.stripMargin
+  }
+
+  def generate(apdlTyp: ApdlTyp): String = apdlTyp match {
+    case ApdlInt() => "int"
+    case ApdlShort() => "short"
+    case ApdlByte() => "byte"
+    case ApdlChar() => "char"
+    case ApdlFloat() => "float"
+    case ApdlDouble() => "double"
+    case ApdlLong() => "long"
   }
 
   def generate(expr: Expr): String = expr match {
@@ -76,6 +194,8 @@ class ArduinoGenerator extends ApdlBackendGenerator {
     case SmallerEquals(left, right) => s"${generate(left)} <= ${generate(right)}"
     case Equals(left, right) => s"${generate(left)} == ${generate(right)}"
     case NotEquals(left, right) => s"${generate(left)} != ${generate(right)}"
+    case ArrayAssignement(symbol, field, value) => s"${generate(symbol)}[${generate(field)}] = ${generate(value)};"
+    case VarAssignement(symbol, value) => s"${generate(symbol)} = ${generate(value)};"
   }
 
   def generate(retType: TfRetTyp): String = retType match {
@@ -155,4 +275,72 @@ class ArduinoGenerator extends ApdlBackendGenerator {
         case ArrayInitCapacity(capacity) => s"${generate(typ)} $identifier* = malloc(sizeof(${generate(typ)}) * $capacity);"
       }
   }
+
+  def cFormat(apdlTyp: ApdlTyp): String = apdlTyp match {
+    case ApdlInt() => "%d"
+    case ApdlShort() => "%d"
+    case ApdlByte() => "%d"
+    case ApdlChar() => "%c"
+    case ApdlFloat() => "%f"
+    case ApdlDouble() => "%f"
+    case ApdlLong() => "%d"
+  }
+
+  val apdlArduinoUtilityFunction: String =
+    s"""
+       |void sendData(char* data, int dataSize) {
+       |  //first we need to connect to InfluxDB server
+       |  int conState = client.connect(server, eth_port);
+       |
+       |  if (conState <= 0) { //check if connection to server is stablished
+       |    Serial.print("Could not connect to InfluxDB Server, Error #");
+       |    Serial.println(conState);
+       |    return;
+       |  }
+       |
+       |  //Send HTTP header and buffer
+       |  client.println("POST /write?db=arduino HTTP/1.1");
+       |  client.println("Host: www.embedonix.com");
+       |  client.println("User-Agent: Arduino/1.0");
+       |  client.println("Connection: close");
+       |  client.println("Content-Type: application/x-www-form-urlencoded");
+       |  client.print("Content-Length: ");
+       |  client.println(dataSize);
+       |  client.println();
+       |  client.println(data);
+       |
+       |  delay(50); //wait for server to process data
+       |
+       |  //Now we read what server has replied and then we close the connection
+       |  Serial.println("Reply from InfluxDB");
+       |  while (client.available()) { //receive char
+       |    Serial.print((char)client.read());
+       |  }
+       |  Serial.println(); //empty line
+       |
+       |  client.stop();
+       |}
+       |
+       |void connectToInflux() {
+       |  if (Ethernet.begin(mac) == 0) {
+       |    Serial.println("Failed to configure Ethernet using DHCP");
+       |    // no point in carrying on, so do nothing forevermore:
+       |    // try to congifure using IP address instead of DHCP:
+       |    Ethernet.begin(mac, ip);
+       |  }
+       |  delay(2000); // give time to allow connection
+       |
+       |  //do a fast test if we can connect to server
+       |  int conState = client.connect(server, eth_port);
+       |
+       |  if (conState > 0) {
+       |    Serial.println("Connected to InfluxDB server");
+       |    client.stop();
+       |  }
+       |
+       |  //print the error number and return false
+       |  Serial.print("Could not connect to InfluxDB Server, Error #");
+       |  Serial.println(conState);
+       |}
+     """.stripMargin
 }
