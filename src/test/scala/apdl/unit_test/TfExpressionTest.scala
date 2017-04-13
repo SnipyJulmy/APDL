@@ -1,4 +1,4 @@
-package apdl.script_syntax
+package apdl.unit_test
 
 import apdl.parser._
 import org.scalatest.FlatSpec

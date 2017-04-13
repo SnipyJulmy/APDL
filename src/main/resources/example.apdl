@@ -2,11 +2,6 @@ transform def tf (x:int) -> int {
     return x / 3 * 2
 }
 
-transform def fac (x:int) -> int {
-    if (x < 2) return 1
-    else return x * fac(x - 1)
-}
-
 influxdb influxdb :
     ip 160.98.61.150
     port 8086

@@ -62,11 +62,13 @@ case class FunctionDecl(header: FunctionHeader, body: FunctionBody) extends Decl
 case class FunctionHeader(resultType: TfRetTyp, identifier: String, parameters: List[TypedIdentifier])
 case class FunctionBody(body: Block)
 
-case class NewVal(identifier: String, typ: TfTyp, init: Expr) extends Declaration
-case class NewVar(identifier: String, typ: TfTyp, init: Option[Expr]) extends Declaration
+case class NewVal(symbol: Symbol, typ: TfTyp, init: Expr) extends Declaration
+case class NewVar(symbol: Symbol, typ: TfTyp, init: Option[Expr]) extends Declaration
 
-case class NewArray(identifier: String, typ: TfArray, init: ArrayInit) extends Declaration
-case class ArrayInit(values: List[TypedIdentifier])
+case class NewArray(symbol: Symbol, typ: TfArray, init: ArrayInit) extends Declaration
+sealed trait ArrayInit
+case class ArrayInitValue(values: List[Expr]) extends ArrayInit
+case class ArrayInitCapacity(capacity: Literal) extends ArrayInit
 
 // Companion object
 

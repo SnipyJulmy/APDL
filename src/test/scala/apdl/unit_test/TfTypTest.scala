@@ -1,4 +1,4 @@
-package apdl.script_syntax
+package apdl.unit_test
 
 import apdl.parser._
 import org.scalatest.FlatSpec
@@ -13,10 +13,9 @@ class TfTypTest extends FlatSpec {
 
   def parseTyp(code: String): TfRetTyp = {
     parser.parse(tf_ret_type, new PackratReader(new CharSequenceReader(code))) match {
-      case Success(result, next) => {
+      case Success(result, next) =>
         if (next.atEnd) result
         else throw new ApdlParserException(s"Something is not parse : ${next.source}")
-      }
       case n: NoSuccess => throw new ApdlParserException(s"Unable to parser $code : $n")
     }
   }

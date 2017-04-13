@@ -165,9 +165,9 @@ class ApdlParser extends RegexParsers with PackratParsers {
     tf_atom | tf_symbol | tf_literal | lp ~> tf_expr <~ rp
   }
 
-  lazy val tf_atom : PackratParser[Expr] = {
-    "true" ^^ {_ => True()} |
-      "false" ^^ {_ => False()}
+  lazy val tf_atom: PackratParser[Expr] = {
+    "true" ^^ { _ => True() } |
+      "false" ^^ { _ => False() }
   }
 
   lazy val tf_expr: PackratParser[Expr] = {
@@ -238,7 +238,7 @@ class ApdlParser extends RegexParsers with PackratParsers {
   }
 
   lazy val tf_statement: PackratParser[Statement] = {
-    tf_block | tf_selection_statement | tf_loop | tf_jump | tf_decl | tf_assign  |tf_expr_statement
+    tf_block | tf_selection_statement | tf_loop | tf_jump | tf_decl | tf_assign | tf_expr_statement
   }
 
   lazy val tf_expr_statement: PackratParser[ExpressionStatement] = tf_expr ^^ { expr => ExpressionStatement(expr) }
@@ -252,7 +252,7 @@ class ApdlParser extends RegexParsers with PackratParsers {
   }
 
   lazy val tf_decl: PackratParser[Declaration] = {
-    tf_new_val | tf_new_var | tf_def
+    tf_new_val | tf_new_array | tf_new_var | tf_def
   }
 
   lazy val tf_def: PackratParser[FunctionDecl] = "def" ~> tf_def_header ~ tf_def_body ^^ { case (h ~ b) => FunctionDecl(h, b) }
@@ -261,16 +261,30 @@ class ApdlParser extends RegexParsers with PackratParsers {
   }
   lazy val tf_def_body: PackratParser[FunctionBody] = tf_block ^^ { b => FunctionBody(b) }
 
+  lazy val tf_new_array: PackratParser[NewArray] = {
+    "var" ~ tf_symbol ~ ":" ~ tf_array_typ ~ "=" ~ tf_array_init ^^ {
+      case (_ ~ id ~ _ ~ typ ~ _ ~ init) => NewArray(id, typ, init)
+    }
+  }
+
   lazy val tf_new_var: PackratParser[NewVar] = {
-    "var" ~ tf_identifier ~ ":" ~ tf_primitives_typ ~ "=" ~ tf_expr ^^ {
+    "var" ~ tf_symbol ~ ":" ~ tf_primitives_typ ~ "=" ~ tf_expr ^^ {
       case (_ ~ id ~ _ ~ typ ~ _ ~ init) => NewVar(id, typ, Some(init))
     } |
-      "var" ~ tf_identifier ~ ":" ~ tf_primitives_typ ^^ {
+      "var" ~ tf_symbol ~ ":" ~ tf_primitives_typ ^^ {
         case (_ ~ id ~ _ ~ typ) => NewVar(id, typ, None)
       }
   }
+
+  lazy val tf_array_init: PackratParser[ArrayInit] = {
+    "[" ~> tf_literal <~ "]" ^^ ArrayInitCapacity |
+      "{" ~> tf_expr ~ rep("," ~> tf_expr) <~ "}" ^^ { es =>
+        ArrayInitValue(es._1 :: es._2)
+      }
+  }
+
   lazy val tf_new_val: PackratParser[NewVal] = {
-    "val" ~ tf_identifier ~ ":" ~ tf_primitives_typ ~ "=" ~ tf_expr ^^ {
+    "val" ~ tf_symbol ~ ":" ~ tf_primitives_typ ~ "=" ~ tf_expr ^^ {
       case (_ ~ id ~ _ ~ typ ~ _ ~ init) => NewVal(id, typ, init)
     }
   }

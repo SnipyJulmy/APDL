@@ -150,6 +150,9 @@ class ArduinoGenerator extends ApdlBackendGenerator {
       case None => s"${generate(typ)} $name;"
     }
     case NewArray(identifier, typ, init) =>
-      s"${generate(typ)} $identifier = malloc(sizeof(${generate(typ)}) * ${init.values.length});"
+      init match {
+        case ArrayInitValue(values) => s"${generate(typ)} $identifier[] = {${values map generate mkString ","}};"
+        case ArrayInitCapacity(capacity) => s"${generate(typ)} $identifier* = malloc(sizeof(${generate(typ)}) * $capacity);"
+      }
   }
 }
