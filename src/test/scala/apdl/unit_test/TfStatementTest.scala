@@ -1,4 +1,4 @@
-package apdl.script_syntax
+package apdl.unit_test
 
 import apdl.parser._
 import org.scalatest.FlatSpec
@@ -29,9 +29,13 @@ class TfStatementTest extends FlatSpec {
   val n = Symbol("n")
   val a = Symbol("a")
   val b = Symbol("b")
-  val zero = Literal(Number("0"))
-  val one = Literal(Number("1"))
-  val ten = Literal(Number("10"))
+  val x = Symbol("x")
+  val zero = Literal("0")
+  val one = Literal("1")
+  val two = Literal("2")
+  val three = Literal("3")
+  val five = Literal("5")
+  val ten = Literal("10")
 
   assertAst("while(i > 0) i = i - 1", While(Greater(i, zero), VarAssignement(i, Sub(i, 1))))
   assertAst("while(i > 0 && j < 10) n = n * 2 + 1", While(And(Greater(i, zero), Smaller(j, ten)), VarAssignement(n, Add(Mul(n, 2), 1))))
@@ -44,4 +48,14 @@ class TfStatementTest extends FlatSpec {
       ExpressionStatement(FunctionCall("print", List(b)))
     )
   )
+  assertAst("i = 5",VarAssignement(i,Literal("5")))
+  assertAst("i = 5.12",VarAssignement(i,Literal("5.12")))
+  assertAst("i = i + 1",VarAssignement(i,Add(i,1)))
+  assertAst("i = j > 1 || b < 1",VarAssignement(i,Or(Greater(j,one),Smaller(b,one))))
+  assertAst("if (a || b < 5) x = log(b)",IfThen(Or(a,Smaller(b,five)),VarAssignement(x,FunctionCall("log",List(b)))))
+  assertAst("var j : int = i + 1",NewVar(j,TfInt(),Some(Add(i,1))))
+  assertAst("var array : int[] = {1,2,3}",NewArray(Symbol("array"),TfArray(TfInt()),ArrayInitValue(List(one,two,three))))
+  assertAst("array[9] = 10",ArrayAssignement(Symbol("array"),Literal("9"),Literal("10")))
+  assertAst("array[i] = i",ArrayAssignement(Symbol("array"),i,i))
+  assertAst("var array : float[] = [100]",NewArray(Symbol("array"),TfArray(TfFloat()),ArrayInitCapacity(Literal("100"))))
 }
