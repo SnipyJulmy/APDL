@@ -7,6 +7,7 @@ scala :
 
 jdk :
   - oraclejdk8
+  - openjdk8
 
 branches :
   except :
@@ -17,8 +18,14 @@ cache:
     - $HOME/.ivy2/cache
     - $HOME/.sbt/boot
 
+before_install:
+  - pip install --user codecov
+
 script :
-  - sbt clean coverage test coverageReport
+  - sbt ++$TRAVIS_SCALA_VERSION coverage test
   # Tricks to avoid unnecessary cache updates
   - find $HOME/.sbt -name "*.lock" | xargs rm
   - find $HOME/.ivy2 -name "ivydata-*.properties" | xargs rm
+
+after_success:
+  - codecov
