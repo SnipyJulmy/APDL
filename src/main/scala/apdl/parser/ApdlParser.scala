@@ -40,11 +40,18 @@ class ApdlParser extends RegexParsers with PackratParsers {
   }
 
   def input: Parser[ApdlInput] = {
-    generic_input
+    pin_input | generic_input
   }
+
   def generic_input: Parser[GenericInput] = {
     "input" ~ input_name ~ apdl_type ^^ {
       case ("input" ~ name ~ input_type) => GenericInput(name, input_type)
+    }
+  }
+
+  def pin_input: Parser[PinInput] = {
+    "input" ~> input_name ~ apdl_type ~ ("from" ~ "pin" ~> "[0-9]+".r) ^^ {
+      case (id ~ typ ~ pin) => PinInput(id, typ, pin.toInt)
     }
   }
 
@@ -54,16 +61,15 @@ class ApdlParser extends RegexParsers with PackratParsers {
     "transform" ~ tf_def ^^ { case (_ ~ _tf_def) => Transformater(_tf_def) }
   }
 
-
   def send: Parser[Send] = generic_send | tf_send
-  def generic_send: Parser[GenericSend] = "send" ~ "to" ~ entity_name ~ input_name ~ sampling_value ^^ {
-    case ("send" ~ "to" ~ target ~ input ~ sampling) =>
+  def generic_send: Parser[GenericSend] = "send" ~ input_name ~ "to" ~ entity_name ~ sampling_value ^^ {
+    case (_ ~ input ~ _ ~ target ~ sampling) =>
       GenericSend(target, input, sampling)
   }
 
-  def tf_send: Parser[TfSend] = "send" ~ "to" ~ entity_name ~ tf_identifier ~ input_name ~ sampling_value ^^ {
-    case ("send" ~ "to" ~ entity_name ~ tf_name ~ input ~ sampling_value) =>
-      TfSend(entity_name, tf_name, input, sampling_value)
+  def tf_send: Parser[TfSend] = "send" ~ tf_identifier ~ input_name ~ "to" ~ entity_name ~ sampling_value ^^ {
+    case (_ ~ tf_name ~ input ~ _ ~ target ~ sampling) =>
+      TfSend(target, tf_name, input, sampling)
   }
 
   def sampling_value: Parser[Int] = "[0-9]+".r ^^ {
@@ -76,7 +82,7 @@ class ApdlParser extends RegexParsers with PackratParsers {
   def _double: Parser[ApdlDouble] = "double" ^^ { _ => ApdlDouble() }
   def _long: Parser[ApdlLong] = "long" ^^ { _ => ApdlLong() }
 
-  def board_id: Parser[BoardId] = "\"" ~ "[a-z0-9_][a-z0-9_]*".r ~ "\"" ^^ { case ("\"" ~ id ~ "\"") => BoardId(id) }
+  def board_id: Parser[BoardId] = "\"" ~> "[a-z0-9_][a-z0-9_]*".r <~ "\"" ^^ { case (id) => BoardId(id) }
 
   def entity_name: Parser[String] = "[a-zA-Z_][a-zA-Z0-9_]*".r ^^ { str => str }
   def influxdb_property: Parser[InfluxDbProperty] = {

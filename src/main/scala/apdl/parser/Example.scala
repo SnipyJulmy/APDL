@@ -14,7 +14,7 @@ object Example extends App {
   val code = parser.parse(parser.program, new PackratReader[Char](new CharSequenceReader(src)))
   code match {
     case Success(result, _) =>
-      println(result)
+      // TODO optimize result, verification, semantic analysis
       println((new ArduinoGenerator).generate(result))
     case error: NoSuccess => println(s"error... : $error")
   }
