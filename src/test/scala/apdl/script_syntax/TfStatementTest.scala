@@ -29,9 +29,9 @@ class TfStatementTest extends FlatSpec {
   val n = Symbol("n")
   val a = Symbol("a")
   val b = Symbol("b")
-  val zero = Literal(Number("0"))
-  val one = Literal(Number("1"))
-  val ten = Literal(Number("10"))
+  val zero = Literal("0")
+  val one = Literal("1")
+  val ten = Literal("10")
 
   assertAst("while(i > 0) i = i - 1", While(Greater(i, zero), VarAssignement(i, Sub(i, 1))))
   assertAst("while(i > 0 && j < 10) n = n * 2 + 1", While(And(Greater(i, zero), Smaller(j, ten)), VarAssignement(n, Add(Mul(n, 2), 1))))
@@ -44,4 +44,8 @@ class TfStatementTest extends FlatSpec {
       ExpressionStatement(FunctionCall("print", List(b)))
     )
   )
+  assertAst("i = 5",VarAssignement(i,Literal("5")))
+  assertAst("i = 5.12",VarAssignement(i,Literal("5.12")))
+  assertAst("i = i + 1",VarAssignement(i,Add(i,1)))
+  assertAst("i = j > 1 || b < 1",VarAssignement(i,Or(Greater(j,one),Smaller(b,one))))
 }

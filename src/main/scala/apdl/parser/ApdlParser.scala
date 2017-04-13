@@ -117,20 +117,76 @@ class ApdlParser extends RegexParsers with PackratParsers {
 
   // Expressions
 
-  lazy val tf_expr: PackratParser[Expr] =
-    tf_expr ~ ("+" ~> tf_term) ^^ { case (t ~ f) => Add(t, f) } |
-      tf_expr ~ ("-" ~> tf_term) ^^ { case (t ~ f) => Sub(t, f) } |
-      tf_term
+  lazy val tf_constant_expr: PackratParser[Expr] = tf_logical_or_expr
 
-  lazy val tf_term: PackratParser[Expr] =
-    tf_term ~ "*" ~ tf_factor ^^ { case (t ~ _ ~ f) => Mul(t, f) } |
-      tf_term ~ "/" ~ tf_factor ^^ { case (t ~ _ ~ f) => Div(t, f) } |
-      tf_factor
+  lazy val tf_logical_or_expr: PackratParser[Expr] = {
+    tf_logical_or_expr ~ ("||" ~> tf_logical_and_expr) ^^ { case (l ~ r) => Or(l, r) } |
+      tf_logical_and_expr
+  }
 
-  lazy val tf_factor: PackratParser[Expr] = tf_function_call | tf_literal | tf_symbol | lp ~> tf_expr <~ rp
-  lazy val tf_symbol: PackratParser[Symbol] = tf_identifier ^^ { x => Symbol(x) }
-  lazy val tf_number: PackratParser[Number] = """[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+)""".r ^^ (value => Number(value))
-  lazy val tf_literal: PackratParser[Literal] = tf_number ^^ Literal
+  lazy val tf_logical_and_expr: PackratParser[Expr] = {
+    tf_logical_and_expr ~ ("&&" ~> tf_equality_expr) ^^ { case (l ~ r) => And(l, r) } |
+      tf_equality_expr
+  }
+
+  lazy val tf_equality_expr: PackratParser[Expr] = {
+    tf_equality_expr ~ ("==" ~> tf_relational_expr) ^^ { case (l ~ r) => Equals(l, r) } |
+      tf_equality_expr ~ ("!=" ~> tf_relational_expr) ^^ { case (l ~ r) => NotEquals(l, r) } |
+      tf_relational_expr
+  }
+
+  lazy val tf_relational_expr: PackratParser[Expr] = {
+    tf_relational_expr ~ (">" ~> tf_additive_expr) ^^ { case (l ~ r) => Greater(l, r) } |
+      tf_relational_expr ~ ("<" ~> tf_additive_expr) ^^ { case (l ~ r) => Smaller(l, r) } |
+      tf_relational_expr ~ (">=" ~> tf_additive_expr) ^^ { case (l ~ r) => GreaterEquals(l, r) } |
+      tf_relational_expr ~ ("<=" ~> tf_additive_expr) ^^ { case (l ~ r) => SmallerEquals(l, r) } |
+      tf_additive_expr
+  }
+
+  lazy val tf_additive_expr: PackratParser[Expr] = {
+    tf_additive_expr ~ ("+" ~> tf_multiplicative_expr) ^^ { case (l ~ r) => Add(l, r) } |
+      tf_additive_expr ~ ("-" ~> tf_multiplicative_expr) ^^ { case (l ~ r) => Sub(l, r) } |
+      tf_multiplicative_expr
+  }
+
+  lazy val tf_multiplicative_expr: PackratParser[Expr] = {
+    tf_multiplicative_expr ~ ("*" ~> tf_postfix_expr) ^^ { case (l ~ r) => Mul(l, r) } |
+      tf_multiplicative_expr ~ ("/" ~> tf_postfix_expr) ^^ { case (l ~ r) => Div(l, r) } |
+      tf_postfix_expr
+  }
+
+  lazy val tf_postfix_expr: PackratParser[Expr] = {
+    tf_function_call |
+      tf_array_assign |
+      tf_primary_expr
+  }
+
+  lazy val tf_primary_expr: PackratParser[Expr] = {
+    tf_atom | tf_symbol | tf_literal | lp ~> tf_expr <~ rp
+  }
+
+  lazy val tf_atom : PackratParser[Expr] = {
+    "true" ^^ {_ => True()} |
+      "false" ^^ {_ => False()}
+  }
+
+  lazy val tf_expr: PackratParser[Expr] = {
+    tf_assign_expr
+  }
+
+  lazy val tf_assign_expr: PackratParser[Expr] = {
+    tf_postfix_expr ~ ("=" ~> tf_assign_expr) ^^ { case (l ~ r) => VarAssignement(l, r) } |
+      tf_logical_or_expr
+  }
+
+  lazy val tf_symbol: PackratParser[Symbol] = {
+    tf_identifier ^^ { x => Symbol(x) }
+  }
+
+  lazy val tf_literal: PackratParser[Literal] = {
+    """[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+)""".r ^^ Literal
+  }
+
   lazy val tf_identifier: PackratParser[String] = "[a-zA-Z_][a-zA-Z0-9_]*".r ^^ { str => str }
 
   lazy val tf_function_call: PackratParser[FunctionCall] =
@@ -138,10 +194,12 @@ class ApdlParser extends RegexParsers with PackratParsers {
       case (id ~ _ ~ args ~ _) => FunctionCall(id, args)
     }
 
-  lazy val tf_function_call_arg: PackratParser[List[Expr]] = (tf_expr ?) ~ rep("," ~ tf_expr) ^^ { exprs =>
-    exprs._1 match {
-      case Some(value) => value :: exprs._2.map(_._2)
-      case None => List()
+  lazy val tf_function_call_arg: PackratParser[List[Expr]] = {
+    (tf_expr ?) ~ rep("," ~ tf_expr) ^^ { exprs =>
+      exprs._1 match {
+        case Some(value) => value :: exprs._2.map(_._2)
+        case None => List()
+      }
     }
   }
 
@@ -159,6 +217,17 @@ class ApdlParser extends RegexParsers with PackratParsers {
       }
   }
 
+
+  lazy val tf_assign: PackratParser[Assignement] = tf_var_assign | tf_array_assign
+  lazy val tf_var_assign: PackratParser[VarAssignement] = {
+    tf_identifier ~ "=" ~ tf_constant_expr ^^ { case (id ~ _ ~ expr) => VarAssignement(Symbol(id), expr) }
+  }
+  lazy val tf_array_assign: PackratParser[ArrayAssignement] = {
+    tf_identifier ~ "[" ~ tf_expr ~ "]" ~ "=" ~ tf_constant_expr ^^ {
+      case (id ~ _ ~ field ~ _ ~ _ ~ expr) => ArrayAssignement(Symbol(id), field, expr)
+    }
+  }
+
   lazy val tf_block: PackratParser[Block] = lb ~> tf_statements <~ rb ^^ { statements => Block(statements) }
 
   lazy val tf_statements: PackratParser[List[Statement]] = tf_statement ~ (rep(tf_statement) ?) ^^ { statements =>
@@ -168,21 +237,17 @@ class ApdlParser extends RegexParsers with PackratParsers {
     }
   }
 
-  lazy val tf_assign: PackratParser[Assignement] = tf_var_assign | tf_array_assign
-  lazy val tf_var_assign: PackratParser[VarAssignement] = tf_identifier ~ "=" ~ tf_expr ^^ { case (id ~ _ ~ expr) => VarAssignement(Symbol(id), expr) }
-  lazy val tf_array_assign: PackratParser[ArrayAssignement] = {
-    tf_identifier ~ "[" ~ tf_expr ~ "]" ~ "=" ~ tf_expr ^^ { case (id ~ _ ~ field ~ _ ~ _ ~ expr) => ArrayAssignement(id, field, expr) }
+  lazy val tf_statement: PackratParser[Statement] = {
+    tf_block | tf_selection_statement | tf_loop | tf_jump | tf_decl | tf_assign  |tf_expr_statement
   }
 
-  lazy val tf_statement: PackratParser[Statement] = {
-    tf_selection_statement | tf_decl | tf_assign | tf_block | tf_loop | tf_jump | tf_expr_statement
-  }
   lazy val tf_expr_statement: PackratParser[ExpressionStatement] = tf_expr ^^ { expr => ExpressionStatement(expr) }
+
   lazy val tf_loop: PackratParser[Statement] = tf_while | tf_dowhile
-  lazy val tf_while: PackratParser[While] = "while" ~ lp ~ tf_boolean_expr ~ rp ~ tf_statement ^^ {
+  lazy val tf_while: PackratParser[While] = "while" ~ lp ~ tf_expr ~ rp ~ tf_statement ^^ {
     case (_ ~ _ ~ cond ~ _ ~ statement) => While(cond, statement)
   }
-  lazy val tf_dowhile: PackratParser[DoWhile] = "do" ~ tf_statement ~ "while" ~ lp ~ tf_boolean_expr ~ rp ^^ {
+  lazy val tf_dowhile: PackratParser[DoWhile] = "do" ~ tf_statement ~ "while" ~ lp ~ tf_expr ~ rp ^^ {
     case (_ ~ statement ~ _ ~ _ ~ cond ~ _) => DoWhile(cond, statement)
   }
 
@@ -211,10 +276,10 @@ class ApdlParser extends RegexParsers with PackratParsers {
   }
 
   lazy val tf_selection_statement: PackratParser[Statement] = tf_if_then_else | tf_if_then
-  lazy val tf_if_then_else: PackratParser[IfThenElse] = "if" ~ lp ~ tf_boolean_expr ~ rp ~ tf_statement ~ "else" ~ tf_statement ^^ {
+  lazy val tf_if_then_else: PackratParser[IfThenElse] = "if" ~ lp ~ tf_expr ~ rp ~ tf_statement ~ "else" ~ tf_statement ^^ {
     case (_ ~ _ ~ cond ~ _ ~ trueBranch ~ _ ~ falseBranch) => IfThenElse(cond, trueBranch, falseBranch)
   }
-  lazy val tf_if_then: PackratParser[IfThen] = "if" ~ lp ~ tf_boolean_expr ~ rp ~ tf_statement ^^ {
+  lazy val tf_if_then: PackratParser[IfThen] = "if" ~ lp ~ tf_expr ~ rp ~ tf_statement ^^ {
     case (_ ~ _ ~ cond ~ _ ~ statement) => IfThen(cond, statement)
   }
 
@@ -222,10 +287,7 @@ class ApdlParser extends RegexParsers with PackratParsers {
     tf_break | tf_continue | tf_return
   }
 
-  lazy val tf_return: PackratParser[Return] = {
-    "return" ~> tf_boolean_expr ^^ {expr => Return(expr)} |
-    "return" ~> tf_expr ^^ { expr => Return(expr) }
-  }
+  lazy val tf_return: PackratParser[Return] = "return" ~> tf_constant_expr ^^ { expr => Return(expr) }
   lazy val tf_break: PackratParser[Break] = "break" ^^ { _ => Break() }
   lazy val tf_continue: PackratParser[Continue] = "continue" ^^ { _ => Continue() }
 
@@ -233,32 +295,4 @@ class ApdlParser extends RegexParsers with PackratParsers {
   lazy val rp = ")"
   lazy val lb = "{"
   lazy val rb = "}"
-
-   lazy val tf_boolean_expr: PackratParser[BooleanExpr] =
-    tf_boolean_expr ~ ("||" ~> tf_boolean_term) ^^ { case (t ~ f) => Or(t, f) } |
-      tf_boolean_term
-
-  lazy val tf_boolean_term: PackratParser[BooleanExpr] =
-    tf_boolean_term ~ ("&&" ~> tf_boolean_factor) ^^ { case (t ~ f) => And(t, f) } |
-      tf_boolean_factor
-
-  lazy val tf_boolean_factor: PackratParser[BooleanExpr] = {
-    tf_relational_expr | bool_not | bool_literal | bool_symbol | lp ~> tf_boolean_expr <~ rp
-  }
-
-  lazy val tf_relational_expr: PackratParser[BooleanExpr] = {
-    tf_expr ~ "<" ~ tf_expr ^^ { case (l ~ _ ~ r) => Smaller(l, r) } |
-      tf_expr ~ ">" ~ tf_expr ^^ { case (l ~ _ ~ r) => Greater(l, r) } |
-      tf_expr ~ "<=" ~ tf_expr ^^ { case (l ~ _ ~ r) => SmallerEquals(l, r) } |
-      tf_expr ~ ">=" ~ tf_expr ^^ { case (l ~ _ ~ r) => GreaterEquals(l, r) } |
-      tf_expr ~ "==" ~ tf_expr ^^ { case (l ~ _ ~ r) => Equals(l, r) } |
-      tf_expr ~ "!=" ~ tf_expr ^^ { case (l ~ _ ~ r) => NotEquals(l, r) }
-  }
-
-  lazy val bool_literal: PackratParser[BooleanExpr] = tf_true | tf_false
-  lazy val bool_not: PackratParser[Not] = "!" ~ tf_boolean_expr ^^ { bool => Not(bool._2) }
-  lazy val bool_symbol: PackratParser[Symbol] = tf_identifier ^^ { id => Symbol(id) }
-
-  lazy val tf_true: PackratParser[True] = "true" ^^ { _ => True() }
-  lazy val tf_false: PackratParser[False] = "false" ^^ { _ => False() }
 }
