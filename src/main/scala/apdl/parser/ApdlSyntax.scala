@@ -13,6 +13,7 @@ case class BoardId(id: String)
 
 sealed trait ApdlInput
 case class GenericInput(name: String, typ: ApdlTyp) extends ApdlInput
+case class PinInput(name : String, typ : ApdlTyp, pin : Int) extends ApdlInput
 
 case class Transformater(function: FunctionDecl) extends Entity
 
@@ -22,6 +23,9 @@ case class TfSend(target: String, tf: String, input: String, sampling: Int) exte
 
 sealed trait ApdlTyp
 case class ApdlInt() extends ApdlTyp
+case class ApdlShort() extends ApdlTyp
+case class ApdlByte() extends ApdlTyp
+case class ApdlChar() extends ApdlTyp
 case class ApdlFloat() extends ApdlTyp
 case class ApdlDouble() extends ApdlTyp
 case class ApdlLong() extends ApdlTyp
