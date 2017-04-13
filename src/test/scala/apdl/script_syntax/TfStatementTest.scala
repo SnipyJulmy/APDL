@@ -29,8 +29,10 @@ class TfStatementTest extends FlatSpec {
   val n = Symbol("n")
   val a = Symbol("a")
   val b = Symbol("b")
+  val x = Symbol("x")
   val zero = Literal("0")
   val one = Literal("1")
+  val five = Literal("5")
   val ten = Literal("10")
 
   assertAst("while(i > 0) i = i - 1", While(Greater(i, zero), VarAssignement(i, Sub(i, 1))))
@@ -48,4 +50,5 @@ class TfStatementTest extends FlatSpec {
   assertAst("i = 5.12",VarAssignement(i,Literal("5.12")))
   assertAst("i = i + 1",VarAssignement(i,Add(i,1)))
   assertAst("i = j > 1 || b < 1",VarAssignement(i,Or(Greater(j,one),Smaller(b,one))))
+  assertAst("if (a || b < 5) x = log(b)",IfThen(Or(a,Smaller(b,five)),VarAssignement(x,FunctionCall("log",List(b)))))
 }
