@@ -270,7 +270,8 @@ class ApdlParser extends RegexParsers with PackratParsers {
   lazy val tf_new_array: PackratParser[NewArray] = {
     "var" ~ tf_symbol ~ ":" ~ tf_array_typ ~ "=" ~ tf_array_init ^^ {
       case (_ ~ id ~ _ ~ typ ~ _ ~ init) => NewArray(id, typ, init)
-    }
+    } |
+    "var" ~ tf_symbol ~ ":" ~ tf_array_typ ^^ {_ => throw new ApdlParserException("Uninitialised array")}
   }
 
   lazy val tf_new_var: PackratParser[NewVar] = {

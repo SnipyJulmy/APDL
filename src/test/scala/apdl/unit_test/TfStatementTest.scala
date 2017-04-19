@@ -58,4 +58,23 @@ class TfStatementTest extends FlatSpec {
   assertAst("array[9] = 10",ArrayAssignement(Symbol("array"),Literal("9"),Literal("10")))
   assertAst("array[i] = i",ArrayAssignement(Symbol("array"),i,i))
   assertAst("var array : float[] = [100]",NewArray(Symbol("array"),TfArray(TfFloat()),ArrayInitCapacity(Literal("100"))))
+  assertAst("var a : int", NewVar(a,TfInt(),None))
+  assertAst("var a : short", NewVar(a,TfShort(),None))
+  assertAst("var a : float", NewVar(a,TfFloat(),None))
+  assertAst("var a : double", NewVar(a,TfDouble(),None))
+  assertAst("var a : byte", NewVar(a,TfByte(),None))
+  assertAst("var a : char", NewVar(a,TfChar(),None))
+
+  assertThrows[ApdlParserException] {
+    assertAst("var a : int[]",NewVar(a,TfArray(TfInt()),None))
+  }
+
+  assertThrows[ApdlParserException] {
+    assertAst(
+      """
+        |var a : int[]
+        |var b : float = 3.2
+      """.stripMargin,NewVar(a,TfArray(TfInt()),None))
+  }
+
 }

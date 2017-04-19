@@ -64,7 +64,6 @@ case class FunctionBody(body: Block)
 
 case class NewVal(symbol: Symbol, typ: TfTyp, init: Expr) extends Declaration
 case class NewVar(symbol: Symbol, typ: TfTyp, init: Option[Expr]) extends Declaration
-
 case class NewArray(symbol: Symbol, typ: TfArray, init: ArrayInit) extends Declaration
 sealed trait ArrayInit
 case class ArrayInitValue(values: List[Expr]) extends ArrayInit
