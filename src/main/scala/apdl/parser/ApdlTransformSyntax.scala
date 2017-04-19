@@ -7,6 +7,8 @@ case class Mul(left: Expr, right: Expr) extends Expr
 case class Sub(left: Expr, right: Expr) extends Expr
 case class Div(left: Expr, right: Expr) extends Expr
 
+case class Cast(tfTyp: TfPrimitivesTyp, expr: Expr) extends Expr
+
 case class Literal(value: String) extends Expr
 case class Symbol(name: String) extends Expr
 case class FunctionCall(funcName: String, args: List[Expr]) extends Expr
