@@ -7,10 +7,12 @@ case class Mul(left: Expr, right: Expr) extends Expr
 case class Sub(left: Expr, right: Expr) extends Expr
 case class Div(left: Expr, right: Expr) extends Expr
 
+case class Cast(tfTyp: TfPrimitivesTyp, expr: Expr) extends Expr
+
 case class Literal(value: String) extends Expr
 case class Symbol(name: String) extends Expr
 case class FunctionCall(funcName: String, args: List[Expr]) extends Expr
-
+case class ArrayAccess(symbol: Symbol,field : Expr) extends Expr
 case class True() extends Expr
 case class False() extends Expr
 case class Or(left: Expr, right: Expr) extends Expr
@@ -40,7 +42,7 @@ case class TfFloat() extends TfFloatingPointTyp
 case class TfArray(typ: TfTyp) extends TfTyp
 case class TfVoid() extends TfRetTyp
 
-case class TypedIdentifier(name: String, typ: TfPrimitivesTyp)
+case class TypedIdentifier(name: String, typ: TfTyp)
 
 sealed trait Statement
 case class While(cond: Expr, statement: Statement) extends Statement

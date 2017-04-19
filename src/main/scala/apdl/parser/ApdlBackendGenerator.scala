@@ -18,9 +18,15 @@ class ArduinoGenerator extends ApdlBackendGenerator {
     val sources = entities.filter(_.isInstanceOf[Source]).map(_.asInstanceOf[Source])
     val transformaters = entities.filter(_.isInstanceOf[Transformater]).map(_.asInstanceOf[Transformater])
 
+    // global info
+    var eth_port: String = ""
+    var server: String = ""
+    var ip: String = ""
+    var mac : String = ""
+
     // Pre-generation
 
-    function write apdlArduinoUtilityFunction
+
     loop write "timer.update();\n"
 
     // generate transformater
@@ -34,10 +40,12 @@ class ArduinoGenerator extends ApdlBackendGenerator {
     // TODO multiple server
     servers.foreach {
       case InfluxDb(name, prop) =>
+        server = s"${name}_ip"
+        eth_port = s"${name}_port"
         header.write {
           s"""
-             |IPAddress ${name}_ip(${prop.ip.address mkString ","});
-             |const int ${name}_port = ${prop.port.number};
+             |IPAddress $server(${prop.ip.address mkString ","});
+             |const int $eth_port = ${prop.port.number};
              |const char* ${name}_database_name = "${prop.database.name}";
              |const char* ${name}_database_name_eth = "${prop.database.name},";
          """.stripMargin
@@ -48,11 +56,13 @@ class ArduinoGenerator extends ApdlBackendGenerator {
     // TODO multiple source for now, assume just one
     assert(sources.length == 1)
     sources.foreach {
-      case GenericSource(name, id, mac, ip, inputs, sends) =>
+      case GenericSource(name, id, macAddress, ipAddress, inputs, sends) =>
+        ip = s"${name}_ip"
+        mac = s"${name}_mac"
         header.write {
           s"""
-             |IPAddress ${name}_ip(${ip.address mkString ","});
-             |byte ${name}_mac[] {${mac.address.map(value => s"0x$value") mkString ","}};
+             |IPAddress $ip(${ipAddress.address mkString ","});
+             |byte $mac[] {${macAddress.address.map(value => s"0x$value") mkString ","}};
          """.stripMargin
         }
         inputs.foreach {
@@ -97,7 +107,7 @@ class ArduinoGenerator extends ApdlBackendGenerator {
                  |  numChars += sprintf(&buf[numChars],"SOURCE=$name ");
                  |  numChars += sprintf(&buf[numChars],"$input=${cFormat(_input.typ)},");
                  |  sendData(buf,numChars);
-                 |  memset(buf,'\\0',buffersSize);
+                 |  memset(buf,'\\0',bufferSize);
                  |  // delay(1000); // some small delay
                  |}
              """.stripMargin
@@ -142,13 +152,72 @@ class ArduinoGenerator extends ApdlBackendGenerator {
                  |  numChars += sprintf(&buf[numChars],"SOURCE=$name ");
                  |  numChars += sprintf(&buf[numChars],"$input=${cFormat(_input.typ)},");
                  |  sendData(buf,numChars);
-                 |  memset(buf,'\\0',buffersSize);
+                 |  memset(buf,'\\0',bufferSize);
                  |  // delay(1000); // some small delay
                  |}
              """.stripMargin
             }
             setup write s"timer.every($sampling,send_${_input.name});\n"
         }
+    }
+
+    function.write {
+      s"""
+         |void sendData(char* data, int dataSize) {
+         |  //first we need to connect to InfluxDB server
+         |  int conState = client.connect($server, $eth_port);
+         |
+         |  if (conState <= 0) { //check if connection to server is stablished
+         |    Serial.print("Could not connect to InfluxDB Server, Error #");
+         |    Serial.println(conState);
+         |    return;
+         |  }
+         |
+       |  //Send HTTP header and buffer
+         |  client.println("POST /write?db=arduino HTTP/1.1");
+         |  client.println("Host: www.embedonix.com");
+         |  client.println("User-Agent: Arduino/1.0");
+         |  client.println("Connection: close");
+         |  client.println("Content-Type: application/x-www-form-urlencoded");
+         |  client.print("Content-Length: ");
+         |  client.println(dataSize);
+         |  client.println();
+         |  client.println(data);
+         |
+         |  delay(50); //wait for server to process data
+         |
+         |  //Now we read what server has replied and then we close the connection
+         |  Serial.println("Reply from InfluxDB");
+         |  while (client.available()) { //receive char
+         |    Serial.print((char)client.read());
+         |  }
+         |  Serial.println(); //empty line
+         |
+         |  client.stop();
+         |}
+         |
+         |void connectToInflux() {
+         |  if (Ethernet.begin($mac) == 0) {
+         |    Serial.println("Failed to configure Ethernet using DHCP");
+         |    // no point in carrying on, so do nothing forevermore:
+         |    // try to congifure using IP address instead of DHCP:
+         |    Ethernet.begin($mac, $ip);
+         |  }
+         |  delay(2000); // give time to allow connection
+         |
+         |  //do a fast test if we can connect to server
+         |  int conState = client.connect($server, $eth_port);
+         |
+         |  if (conState > 0) {
+         |    Serial.println("Connected to InfluxDB server");
+         |    client.stop();
+         |  }
+         |
+         |  //print the error number and return false
+         |  Serial.print("Could not connect to InfluxDB Server, Error #");
+         |  Serial.println(conState);
+         |}
+     """.stripMargin
     }
 
     s"""
@@ -159,7 +228,7 @@ class ArduinoGenerator extends ApdlBackendGenerator {
        |Timer timer;
        |
        |const int bufferSize = 2048;
-       |char buf[bufferSize] = {'\0'};
+       |char buf[bufferSize] = {'\\0'};
        |
        |$header
        |
@@ -186,12 +255,14 @@ class ArduinoGenerator extends ApdlBackendGenerator {
   }
 
   def generate(expr: Expr): String = expr match {
+    case Symbol(s) => s"$s"
     case Add(left, right) => s"(${generate(left)} + ${generate(right)})"
     case Mul(left, right) => s"(${generate(left)} * ${generate(right)})"
     case Sub(left, right) => s"(${generate(left)} - ${generate(right)})"
     case Div(left, right) => s"(${generate(left)} / ${generate(right)})"
+    case ArrayAccess(symbol,field) => s"${generate(symbol)}[${generate(field)}]"
+    case Cast(typ, e) => s"(${generate(typ)})${generate(e)}"
     case Literal(value) => s"$value"
-    case Symbol(name) => s" $name "
     case FunctionCall(funcName, args) => s"$funcName(${args map generate mkString ","})"
     case True() => "true"
     case False() => "false"
@@ -273,11 +344,11 @@ class ArduinoGenerator extends ApdlBackendGenerator {
          |${generate(resultType)} $identifier (${generateParameters(parameters)})
          |  ${generate(body)}
        """.stripMargin
-    case NewVal(name, typ, init) =>
-      s"const ${generate(typ)} $name = ${generate(init)};"
-    case NewVar(name, typ, init) => init match {
-      case Some(value) => s"${generate(typ)} $name = ${generate(value)};"
-      case None => s"${generate(typ)} $name;"
+    case NewVal(symbol, typ, init) =>
+      s"const ${generate(typ)} ${generate(symbol)} = ${generate(init)};"
+    case NewVar(symbol, typ, init) => init match {
+      case Some(value) => s"${generate(typ)} ${generate(symbol)} = ${generate(value)};"
+      case None => s"${generate(typ)} ${generate(symbol)};"
     }
     case NewArray(identifier, typ, init) =>
       init match {
@@ -296,61 +367,5 @@ class ArduinoGenerator extends ApdlBackendGenerator {
     case ApdlLong() => "%d"
   }
 
-  val apdlArduinoUtilityFunction: String =
-    s"""
-       |void sendData(char* data, int dataSize) {
-       |  //first we need to connect to InfluxDB server
-       |  int conState = client.connect(server, eth_port);
-       |
-       |  if (conState <= 0) { //check if connection to server is stablished
-       |    Serial.print("Could not connect to InfluxDB Server, Error #");
-       |    Serial.println(conState);
-       |    return;
-       |  }
-       |
-       |  //Send HTTP header and buffer
-       |  client.println("POST /write?db=arduino HTTP/1.1");
-       |  client.println("Host: www.embedonix.com");
-       |  client.println("User-Agent: Arduino/1.0");
-       |  client.println("Connection: close");
-       |  client.println("Content-Type: application/x-www-form-urlencoded");
-       |  client.print("Content-Length: ");
-       |  client.println(dataSize);
-       |  client.println();
-       |  client.println(data);
-       |
-       |  delay(50); //wait for server to process data
-       |
-       |  //Now we read what server has replied and then we close the connection
-       |  Serial.println("Reply from InfluxDB");
-       |  while (client.available()) { //receive char
-       |    Serial.print((char)client.read());
-       |  }
-       |  Serial.println(); //empty line
-       |
-       |  client.stop();
-       |}
-       |
-       |void connectToInflux() {
-       |  if (Ethernet.begin(mac) == 0) {
-       |    Serial.println("Failed to configure Ethernet using DHCP");
-       |    // no point in carrying on, so do nothing forevermore:
-       |    // try to congifure using IP address instead of DHCP:
-       |    Ethernet.begin(mac, ip);
-       |  }
-       |  delay(2000); // give time to allow connection
-       |
-       |  //do a fast test if we can connect to server
-       |  int conState = client.connect(server, eth_port);
-       |
-       |  if (conState > 0) {
-       |    Serial.println("Connected to InfluxDB server");
-       |    client.stop();
-       |  }
-       |
-       |  //print the error number and return false
-       |  Serial.print("Could not connect to InfluxDB Server, Error #");
-       |  Serial.println(conState);
-       |}
-     """.stripMargin
+
 }
