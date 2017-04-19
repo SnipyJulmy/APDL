@@ -156,8 +156,13 @@ class ApdlParser extends RegexParsers with PackratParsers {
   }
 
   lazy val tf_multiplicative_expr: PackratParser[Expr] = {
-    tf_multiplicative_expr ~ ("*" ~> tf_postfix_expr) ^^ { case (l ~ r) => Mul(l, r) } |
-      tf_multiplicative_expr ~ ("/" ~> tf_postfix_expr) ^^ { case (l ~ r) => Div(l, r) } |
+    tf_multiplicative_expr ~ ("*" ~> tf_cast_expr) ^^ { case (l ~ r) => Mul(l, r) } |
+      tf_multiplicative_expr ~ ("/" ~> tf_cast_expr) ^^ { case (l ~ r) => Div(l, r) } |
+      tf_cast_expr
+  }
+
+  lazy val tf_cast_expr: PackratParser[Expr] = {
+    (lp ~> tf_primitives_typ <~ rp) ~ tf_cast_expr ^^ { case (t ~ expr) => Cast(t, expr) } |
       tf_postfix_expr
   }
 
@@ -271,7 +276,7 @@ class ApdlParser extends RegexParsers with PackratParsers {
     "var" ~ tf_symbol ~ ":" ~ tf_array_typ ~ "=" ~ tf_array_init ^^ {
       case (_ ~ id ~ _ ~ typ ~ _ ~ init) => NewArray(id, typ, init)
     } |
-    "var" ~ tf_symbol ~ ":" ~ tf_array_typ ^^ {_ => throw new ApdlParserException("Uninitialised array")}
+      "var" ~ tf_symbol ~ ":" ~ tf_array_typ ^^ { _ => throw new ApdlParserException("Uninitialised array") }
   }
 
   lazy val tf_new_var: PackratParser[NewVar] = {
