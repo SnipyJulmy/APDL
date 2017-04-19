@@ -58,7 +58,11 @@ class ApdlParser extends RegexParsers with PackratParsers {
   def input_name: Parser[String] = "[a-zA-Z_][a-zA-Z0-9_]*".r ^^ { str => str }
 
   def transform: Parser[Transformater] = {
-    "transform" ~ tf_def ^^ { case (_ ~ _tf_def) => Transformater(_tf_def) }
+    "transform" ~ tf_def ^^ { case (_ ~ _tf_def) =>
+      if (_tf_def.header.resultType == TfVoid())
+        throw new ApdlParserException("void transform aren't supported for the moment")
+      Transformater(_tf_def)
+    }
   }
 
   def send: Parser[Send] = generic_send | tf_send
@@ -168,12 +172,17 @@ class ApdlParser extends RegexParsers with PackratParsers {
 
   lazy val tf_postfix_expr: PackratParser[Expr] = {
     tf_function_call |
+      tf_array_access |
       tf_array_assign |
       tf_primary_expr
   }
 
   lazy val tf_primary_expr: PackratParser[Expr] = {
     tf_atom | tf_symbol | tf_literal | lp ~> tf_expr <~ rp
+  }
+
+  lazy val tf_array_access: PackratParser[Expr] = {
+    tf_identifier ~ ("[" ~> tf_expr <~ "]") ^^ { case (id ~ expr) => ArrayAccess(Symbol(id), expr) }
   }
 
   lazy val tf_atom: PackratParser[Expr] = {
@@ -215,8 +224,9 @@ class ApdlParser extends RegexParsers with PackratParsers {
   }
 
   lazy val tf_args: PackratParser[List[TypedIdentifier]] = tf_arg ~ rep("," ~ tf_arg) ^^ { x => x._1 :: x._2.map(_._2) }
+
   lazy val tf_arg: PackratParser[TypedIdentifier] = {
-    tf_identifier ~ ":" ~ tf_primitives_typ ^^ { case (id ~ _ ~ typ) => TypedIdentifier(id, typ) }
+    tf_identifier ~ ":" ~ tf_typ ^^ { case (id ~ _ ~ typ) => TypedIdentifier(id, typ) }
   }
 
   lazy val tf_body: PackratParser[(List[Declaration], List[Statement], Return)] = {
@@ -267,9 +277,11 @@ class ApdlParser extends RegexParsers with PackratParsers {
   }
 
   lazy val tf_def: PackratParser[FunctionDecl] = "def" ~> tf_def_header ~ tf_def_body ^^ { case (h ~ b) => FunctionDecl(h, b) }
-  lazy val tf_def_header: Parser[FunctionHeader] = tf_identifier ~ lp ~ tf_args ~ rp ~ "->" ~ tf_ret_type ^^ {
-    case (id ~ _ ~ parameters ~ _ ~ "->" ~ ret_type) => FunctionHeader(ret_type, id, parameters)
-  }
+  lazy val tf_def_header: Parser[FunctionHeader] =
+    tf_identifier ~ lp ~ tf_args ~ rp ~ "->" ~ tf_ret_type ^^ {
+      case (id ~ _ ~ parameters ~ _ ~ "->" ~ ret_type) => FunctionHeader(ret_type, id, parameters)
+    } |
+      tf_identifier ~ (lp ~ rp ~ "->" ~> tf_ret_type) ^^ { case (id ~ typ) => FunctionHeader(typ, id, List()) }
   lazy val tf_def_body: PackratParser[FunctionBody] = tf_block ^^ { b => FunctionBody(b) }
 
   lazy val tf_new_array: PackratParser[NewArray] = {
