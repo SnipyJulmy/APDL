@@ -11,3 +11,9 @@ class ApdlParserException(s: String) extends Throwable {
     s"$s ${super.toString}"
   }
 }
+
+class ApdlArgsException(s : String) extends Throwable {
+  override def toString: String = {
+    s"$s ${super.toString}"
+  }
+}
