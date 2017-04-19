@@ -21,6 +21,7 @@ class ArduinoGenerator extends ApdlBackendGenerator {
     // Pre-generation
 
     function write apdlArduinoUtilityFunction
+    loop write "timer.update();\n"
 
     // generate transformater
     transformaters.foreach { tf =>
@@ -62,7 +63,6 @@ class ArduinoGenerator extends ApdlBackendGenerator {
         }
         sends.foreach {
           case GenericSend(target, input, sampling) =>
-            println(s"send $input to $target")
             val _input = {
               inputs.find {
                 case _: GenericInput =>
@@ -102,6 +102,7 @@ class ArduinoGenerator extends ApdlBackendGenerator {
                  |}
              """.stripMargin
             }
+            setup write s"timer.every($sampling,send_${_input.name});\n"
 
           case TfSend(target, tf, input, sampling) =>
             val _input = {
@@ -146,6 +147,7 @@ class ArduinoGenerator extends ApdlBackendGenerator {
                  |}
              """.stripMargin
             }
+            setup write s"timer.every($sampling,send_${_input.name});\n"
         }
     }
 
@@ -162,6 +164,14 @@ class ArduinoGenerator extends ApdlBackendGenerator {
        |$header
        |
        |$function
+       |
+       |void setup() {
+       |  $setup
+       |}
+       |
+       |void loop() {
+       |  $loop
+       |}
      """.stripMargin
   }
 
