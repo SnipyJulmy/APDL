@@ -48,25 +48,25 @@ class TfStatementTest extends FlatSpec {
       ExpressionStatement(FunctionCall("print", List(b)))
     )
   )
-  assertAst("i = 5",VarAssignement(i,Literal("5")))
-  assertAst("i = 5.12",VarAssignement(i,Literal("5.12")))
-  assertAst("i = i + 1",VarAssignement(i,Add(i,1)))
-  assertAst("i = j > 1 || b < 1",VarAssignement(i,Or(Greater(j,one),Smaller(b,one))))
-  assertAst("if (a || b < 5) x = log(b)",IfThen(Or(a,Smaller(b,five)),VarAssignement(x,FunctionCall("log",List(b)))))
-  assertAst("var j : int = i + 1",NewVar(j,TfInt(),Some(Add(i,1))))
-  assertAst("var array : int[] = {1,2,3}",NewArray(Symbol("array"),TfArray(TfInt()),ArrayInitValue(List(one,two,three))))
-  assertAst("array[9] = 10",ArrayAssignement(Symbol("array"),Literal("9"),Literal("10")))
-  assertAst("array[i] = i",ArrayAssignement(Symbol("array"),i,i))
-  assertAst("var array : float[] = [100]",NewArray(Symbol("array"),TfArray(TfFloat()),ArrayInitCapacity(Literal("100"))))
-  assertAst("var a : int", NewVar(a,TfInt(),None))
-  assertAst("var a : short", NewVar(a,TfShort(),None))
-  assertAst("var a : float", NewVar(a,TfFloat(),None))
-  assertAst("var a : double", NewVar(a,TfDouble(),None))
-  assertAst("var a : byte", NewVar(a,TfByte(),None))
-  assertAst("var a : char", NewVar(a,TfChar(),None))
+  assertAst("i = 5", VarAssignement(i, Literal("5")))
+  assertAst("i = 5.12", VarAssignement(i, Literal("5.12")))
+  assertAst("i = i + 1", VarAssignement(i, Add(i, 1)))
+  assertAst("i = j > 1 || b < 1", VarAssignement(i, Or(Greater(j, one), Smaller(b, one))))
+  assertAst("if (a || b < 5) x = log(b)", IfThen(Or(a, Smaller(b, five)), VarAssignement(x, FunctionCall("log", List(b)))))
+  assertAst("var j : int = i + 1", NewVar(j, TfInt(), Some(Add(i, 1))))
+  assertAst("var array : int[] = {1,2,3}", NewArray(Symbol("array"), TfArray(TfInt()), ArrayInitValue(List(one, two, three))))
+  assertAst("array[9] = 10", ArrayAssignement(Symbol("array"), Literal("9"), Literal("10")))
+  assertAst("array[i] = i", ArrayAssignement(Symbol("array"), i, i))
+  assertAst("var array : float[] = [100]", NewArray(Symbol("array"), TfArray(TfFloat()), ArrayInitCapacity(Literal("100"))))
+  assertAst("var a : int", NewVar(a, TfInt(), None))
+  assertAst("var a : short", NewVar(a, TfShort(), None))
+  assertAst("var a : float", NewVar(a, TfFloat(), None))
+  assertAst("var a : double", NewVar(a, TfDouble(), None))
+  assertAst("var a : byte", NewVar(a, TfByte(), None))
+  assertAst("var a : char", NewVar(a, TfChar(), None))
 
   assertThrows[ApdlParserException] {
-    assertAst("var a : int[]",NewVar(a,TfArray(TfInt()),None))
+    assertAst("var a : int[]", NewVar(a, TfArray(TfInt()), None))
   }
 
   assertThrows[ApdlParserException] {
@@ -74,7 +74,54 @@ class TfStatementTest extends FlatSpec {
       """
         |var a : int[]
         |var b : float = 3.2
-      """.stripMargin,NewVar(a,TfArray(TfInt()),None))
+      """.stripMargin, NewVar(a, TfArray(TfInt()), None))
   }
 
+  assertAst("def fac (x:int) -> int {if(x < 2) return 1 else return x * fac(x-1)}",
+    FunctionDecl(
+      FunctionHeader(TfInt(), "fac", List(TypedIdentifier("x", TfInt()))),
+      FunctionBody(Block(List(IfThenElse(
+        Smaller(Symbol("x"), Literal("2")),
+        Return(Literal("1")),
+        Return(Mul(Symbol("x"), FunctionCall("fac", List(Sub(Symbol("x"), Literal("1"))))))
+      ))))
+    )
+  )
+
+  assertAst("def one () -> int {return 1}",
+    FunctionDecl(
+      FunctionHeader(TfInt(), "one", List()),
+      FunctionBody(Block(List(Return(Literal("1")))))
+    )
+  )
+
+  assertAst(
+    """
+      |def fac(x:int) -> int {
+      | def fac_inner(x:int,acc:int) -> int {
+      |   if(x < 2) return acc else return fac_inner(x-1,acc*x)
+      | }
+      | return fac_inner(x,1)
+      |}
+    """.stripMargin, FunctionDecl(
+      FunctionHeader(TfInt(), "fac", List(TypedIdentifier("x", TfInt()))),
+      FunctionBody(Block(List(
+        FunctionDecl(
+          FunctionHeader(TfInt(), "fac_inner", List(
+            TypedIdentifier("x", TfInt()),
+            TypedIdentifier("acc", TfInt())
+          )),
+          FunctionBody(Block(List(IfThenElse(
+            Smaller(Symbol("x"), Literal("2")),
+            Return(Symbol("acc")),
+            Return(FunctionCall("fac_inner", List(
+              Sub(Symbol("x"), Literal("1")),
+              Mul(Symbol("acc"), Symbol("x"))
+            )))
+          ))))
+        ),
+        Return(FunctionCall("fac_inner", List(Symbol("x"), Literal("1"))))
+      )))
+    )
+  )
 }
