@@ -13,6 +13,8 @@ case class Literal(value: String) extends Expr
 case class Symbol(name: String) extends Expr
 case class FunctionCall(funcName: String, args: List[Expr]) extends Expr
 case class ArrayAccess(symbol: Symbol,field : Expr) extends Expr
+
+// Bool
 case class True() extends Expr
 case class False() extends Expr
 case class Or(left: Expr, right: Expr) extends Expr
