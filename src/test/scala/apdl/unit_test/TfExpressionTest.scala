@@ -93,7 +93,7 @@ class TfExpressionTest extends FlatSpec {
   // (String,String)
   assertCompanionObject(Add("x", "y"), Add(Symbol("x"), Symbol("y")))
   assertCompanionObject(Sub("z", "y"), Sub(Symbol("z"), Symbol("y")))
-  assertCompanionObject(Mul("xasdds", "y"), Mul(Symbol("xasdds"), Symbol("y")))
+  assertCompanionObject(Mul("x", "y"), Mul(Symbol("x"), Symbol("y")))
   assertCompanionObject(Div("sad123", "asd1"), Div(Symbol("sad123"), Symbol("asd1")))
 
   // (String,AnyVal)
@@ -108,7 +108,7 @@ class TfExpressionTest extends FlatSpec {
   assertCompanionObject(Mul(2, "x"), Mul(Literal("2"), Symbol("x")))
   assertCompanionObject(Div(2, "x"), Div(Literal("2"), Symbol("x")))
 
-  // (Expr,Anyval)
+  // (Expr,AnyVal)
   assertCompanionObject(Add(Add(2, "a"), 3), Add(Add(Literal("2"), Symbol("a")), Literal("3")))
   assertCompanionObject(Sub(Sub(2, "a"), 3), Sub(Sub(Literal("2"), Symbol("a")), Literal("3")))
   assertCompanionObject(Mul(Mul(2, "a"), 3), Mul(Mul(Literal("2"), Symbol("a")), Literal("3")))
@@ -132,7 +132,7 @@ class TfExpressionTest extends FlatSpec {
   assertCompanionObject(Mul("y", Mul(2, "a")), Mul(Symbol("y"), Mul(Literal("2"), Symbol("a"))))
   assertCompanionObject(Div("y", Div(2, "a")), Div(Symbol("y"), Div(Literal("2"), Symbol("a"))))
 
-  /* Arithemetic expression ast test */
+  /* Arithmetic expression ast test */
   assertAst("(2*2)+(4*4)", Add(Mul(2, 2), Mul(4, 4)))
   assertAst("(2*2)/(4*4)", Div(Mul(2, 2), Mul(4, 4)))
   assertAst("(2*2)*(4*4)", Mul(Mul(2, 2), Mul(4, 4)))
@@ -141,7 +141,7 @@ class TfExpressionTest extends FlatSpec {
   assertAst("y - 10", Sub(Symbol("y"), Literal("10")))
   assertAst("5 * 6", Mul(5, 6))
   assertAst("x * y", Mul("x", "y"))
-  assertAst("asd / asfa", Div("asd", "asfa"))
+  assertAst("asd / asd", Div("asd", "asd"))
   assertAst("9 / 5 / x * 4", Mul(Div(Div(Literal("9"), Literal("5")), Symbol("x")), Literal("4")))
   assertAst("log(x*232)", FunctionCall("log", List(Mul("x", 232))))
   assertAst("x * 3 + 4", Add(Mul(Symbol("x"), Literal("3")), Literal("4")))
@@ -174,15 +174,19 @@ class TfExpressionTest extends FlatSpec {
           ArrayAccess(
             Symbol("i"),
             Literal("2")
-          ),Literal("23")
-        ),Literal("3")
+          ), Literal("23")
+        ), Literal("3")
       ),
       Literal("1")
     ))
   assertAst("array[9] = 10", VarAssignement(ArrayAccess(Symbol("array"), Literal("9")), Literal("10")))
   assertAst("array[i] = i", VarAssignement(ArrayAccess(Symbol("array"), Symbol("i")), Symbol("i")))
+  assertAst("a[1][2] = a[2][1]", VarAssignement(
+    ArrayAccess(ArrayAccess(Symbol("a"),Literal("1")),Literal("2")),
+    ArrayAccess(ArrayAccess(Symbol("a"),Literal("2")),Literal("1"))
+  ))
 
-  // Cast expr
+  /* Cast expr */
   assertAst("(int)3.2", Cast(TfInt(), Literal("3.2")))
   assertAst("(float)10", Cast(TfFloat(), Literal("10")))
   assertAst("(double)100", Cast(TfDouble(), Literal("100")))
@@ -199,6 +203,9 @@ class TfExpressionTest extends FlatSpec {
   "(int[])b" should "produce an ApdlParserException" in {
     assertThrows[ApdlParserException](parseExpr("(int[])b"))
   }
+
+  assertAst("1 + (float)3",Add(Literal("1"),Cast(TfFloat(),Literal("3"))))
+  assertAst("1 - (float)3",Sub(Literal("1"),Cast(TfFloat(),Literal("3"))))
 
   /* Boolean expression AST test */
 

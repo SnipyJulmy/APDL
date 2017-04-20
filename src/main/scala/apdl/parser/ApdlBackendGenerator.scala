@@ -53,7 +53,7 @@ class ArduinoGenerator extends ApdlBackendGenerator {
     }
 
     // generate sources info
-    // TODO multiple source for now, assume just one
+    // TODO multiple source ; for now,we assume that there is just one
     assert(sources.length == 1)
     sources.foreach {
       case GenericSource(name, id, macAddress, ipAddress, inputs, sends) =>
@@ -363,6 +363,4 @@ class ArduinoGenerator extends ApdlBackendGenerator {
     case ApdlDouble() => "%f"
     case ApdlLong() => "%d"
   }
-
-
 }

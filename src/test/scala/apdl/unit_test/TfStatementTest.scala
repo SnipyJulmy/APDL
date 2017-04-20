@@ -48,6 +48,18 @@ class TfStatementTest extends FlatSpec {
       ExpressionStatement(FunctionCall("print", List(b)))
     )
   )
+
+  assertAst("while((int)3.4){(double)4 break}",
+    While(
+      Cast(
+        TfInt(),
+        Literal("3.4")
+      ), Block(List(
+        ExpressionStatement(Cast(TfDouble(), Literal("4"))),
+        Break()
+      ))
+    ))
+
   assertAst("i = 5", ExpressionStatement(VarAssignement(i, Literal("5"))))
   assertAst("i = 5.12", ExpressionStatement(VarAssignement(i, Literal("5.12"))))
   assertAst("i = i + 1", ExpressionStatement(VarAssignement(i, Add(i, 1))))
