@@ -150,7 +150,7 @@ class TfTypTest extends FlatSpec {
 
   s"void[][]" should "not pass" in assert {
     Try(parseTyp("void[][]")) match {
-      case util.Failure(f) => true
+      case util.Failure(_) => true
       case util.Success(_) => false
     }
   }
