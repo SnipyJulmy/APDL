@@ -12,7 +12,9 @@ case class Cast(tfTyp: TfPrimitivesTyp, expr: Expr) extends Expr
 case class Literal(value: String) extends Expr
 case class Symbol(name: String) extends Expr
 case class FunctionCall(funcName: String, args: List[Expr]) extends Expr
-case class ArrayAccess(symbol: Symbol,field : Expr) extends Expr
+case class ArrayAccess(array : Expr,field : Expr) extends Expr
+
+// Bool
 case class True() extends Expr
 case class False() extends Expr
 case class Or(left: Expr, right: Expr) extends Expr
@@ -54,10 +56,7 @@ case class Break() extends Statement
 case class Continue() extends Statement
 case class Block(statements: List[Statement]) extends Statement
 case class ExpressionStatement(expression: Expr) extends Statement
-
-sealed trait Assignement extends Statement with Expr
-case class VarAssignement(symbol: Symbol, value: Expr) extends Assignement
-case class ArrayAssignement(symbol: Symbol, field: Expr, value: Expr) extends Assignement
+case class VarAssignement(target: Expr, value: Expr) extends Expr
 
 sealed trait Declaration extends Statement
 case class FunctionDecl(header: FunctionHeader, body: FunctionBody) extends Declaration
@@ -115,11 +114,4 @@ object Div {
   def apply(l: Expr, r: String): Div = new Div(l, Symbol(r))
   def apply(l: String, r: Expr): Div = new Div(Symbol(l), r)
   def apply(l: String, r: String): Div = new Div(Symbol(l), Symbol(r))
-}
-
-object VarAssignement {
-  def apply(symbol: Expr, value: Expr): VarAssignement = symbol match {
-    case symbol: Symbol => new VarAssignement(symbol, value)
-    case _ => throw new ApdlParserException(s"Can't assign $value to $symbol")
-  }
 }

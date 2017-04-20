@@ -32,7 +32,7 @@ class EntityTest extends FlatSpec {
        |    return temperature
        |}""".stripMargin
 
-  t1 should "produce the correct ast" in {
+  t1 should s"produce $t1" in {
     val expected: Transformater = Transformater(FunctionDecl(
       FunctionHeader(TfFloat(), "tf", List(TypedIdentifier("x", TfInt()))),
       FunctionBody(Block(List(
@@ -49,7 +49,7 @@ class EntityTest extends FlatSpec {
             Literal("273.15"))),
         Return(Symbol("temperature"))
       )))))
-    assert(expected == parseTransform(t1))
+    assert(parseTransform(t1) == expected)
   }
 
   val t2: String =
@@ -57,12 +57,12 @@ class EntityTest extends FlatSpec {
        | return 2
        |}""".stripMargin
 
-  t2 should "produce the correct ast" in {
+  t2 should s"produce $t2" in {
     val expected = Transformater(FunctionDecl(
       FunctionHeader(TfInt(), "x", List()),
       FunctionBody(Block(List(Return(Literal("2")))))
     ))
-    assert(expected == parseTransform(t2))
+    assert(parseTransform(t2) == expected)
   }
 
   val t3: String =
@@ -70,7 +70,7 @@ class EntityTest extends FlatSpec {
        |  return max(max(a,b),max(c,d))
        |}""".stripMargin
 
-  t3 should "produce the correct ast" in {
+  t3 should s"produce $t3" in {
     val expected: Transformater = Transformater(FunctionDecl(
       FunctionHeader(
         TfFloat(),
@@ -90,7 +90,7 @@ class EntityTest extends FlatSpec {
       )))
     ))
 
-    assert(expected == parseTransform(t3))
+    assert(parseTransform(t3) == expected)
   }
 
   val t4: String =
@@ -98,7 +98,7 @@ class EntityTest extends FlatSpec {
        |  if (x < 2) return 1 else return x * factorial(x - 1)
        |}""".stripMargin
 
-  t4 should "produce the correct ast" in {
+  t4 should s"produce $t4" in {
     val expected: Transformater = Transformater(FunctionDecl(
       FunctionHeader(TfInt(), "factorial", List(TypedIdentifier("x", TfInt()))),
       FunctionBody(Block(List(IfThenElse(
@@ -107,7 +107,7 @@ class EntityTest extends FlatSpec {
         Return(Mul(Symbol("x"), FunctionCall("factorial", List(Sub(Symbol("x"), Literal("1"))))))
       ))))
     ))
-    assert(expected == parseTransform(t4))
+    assert(parseTransform(t4) == expected)
   }
   val t5: String =
     """|transform def sumArray (a:int[],size:int) -> int {
@@ -118,7 +118,7 @@ class EntityTest extends FlatSpec {
        |  }
        |  return res
        |}""".stripMargin
-  t5 should "produce the correct ast" in {
+  t5 should s"produce $t5" in {
     val expected: Transformater = Transformater(FunctionDecl(
       FunctionHeader(TfInt(), "sumArray", List(
         TypedIdentifier("a", TfArray(TfInt())),
@@ -129,14 +129,14 @@ class EntityTest extends FlatSpec {
         While(
           Greater(Symbol("size"), Literal("0")),
           Block(List(
-            VarAssignement(Symbol("res"), Add(Symbol("res"), ArrayAccess(Symbol("a"), Symbol("size")))),
-            VarAssignement(Symbol("size"), Sub(Symbol("size"), Literal("1")))
+            ExpressionStatement(VarAssignement(Symbol("res"), Add(Symbol("res"), ArrayAccess(Symbol("a"), Symbol("size"))))),
+            ExpressionStatement(VarAssignement(Symbol("size"), Sub(Symbol("size"), Literal("1"))))
           ))
         ),
         Return(Symbol("res"))
       )))
     ))
-    assert(expected == parseTransform(t5))
+    assert(parseTransform(t5) == expected)
   }
 
   val t6: String =
@@ -144,7 +144,11 @@ class EntityTest extends FlatSpec {
        |  printf("%d\n",temp)
        |}""".stripMargin
 
-  t6 should "throw a ApdlParserExeception" in {
+  t6 should s"throw an ApdlParserException" in {
     assertThrows[ApdlParserException](parseTransform(t6))
   }
+
+  /* Source test */
+
+  /* Server test */
 }

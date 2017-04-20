@@ -173,7 +173,6 @@ class ApdlParser extends RegexParsers with PackratParsers {
   lazy val tf_postfix_expr: PackratParser[Expr] = {
     tf_function_call |
       tf_array_access |
-      tf_array_assign |
       tf_primary_expr
   }
 
@@ -182,7 +181,9 @@ class ApdlParser extends RegexParsers with PackratParsers {
   }
 
   lazy val tf_array_access: PackratParser[Expr] = {
-    tf_identifier ~ ("[" ~> tf_expr <~ "]") ^^ { case (id ~ expr) => ArrayAccess(Symbol(id), expr) }
+    tf_identifier ~ rep1("[" ~> tf_expr <~ "]") ^^ { case (id ~ expr) =>
+      expr.tail.foldLeft(ArrayAccess(Symbol(id), expr.head))((acc, elt) => ArrayAccess(acc, elt))
+    }
   }
 
   lazy val tf_atom: PackratParser[Expr] = {
@@ -229,37 +230,16 @@ class ApdlParser extends RegexParsers with PackratParsers {
     tf_identifier ~ ":" ~ tf_typ ^^ { case (id ~ _ ~ typ) => TypedIdentifier(id, typ) }
   }
 
-  lazy val tf_body: PackratParser[(List[Declaration], List[Statement], Return)] = {
-    lb ~> tf_return <~ rb ^^ { ret => (Nil, Nil, ret) } |
-      lb ~> rep(tf_decl | tf_statement) ~ tf_return <~ rb ^^ { body =>
-        val declarations = body._1.filter(_.isInstanceOf[Declaration]).map(_.asInstanceOf[Declaration])
-        val statements = body._1.filterNot(_.isInstanceOf[Declaration])
-        (declarations, statements, body._2)
-      }
-  }
-
-
-  lazy val tf_assign: PackratParser[Assignement] = tf_var_assign | tf_array_assign
   lazy val tf_var_assign: PackratParser[VarAssignement] = {
     tf_identifier ~ "=" ~ tf_constant_expr ^^ { case (id ~ _ ~ expr) => VarAssignement(Symbol(id), expr) }
-  }
-  lazy val tf_array_assign: PackratParser[ArrayAssignement] = {
-    tf_identifier ~ "[" ~ tf_expr ~ "]" ~ "=" ~ tf_constant_expr ^^ {
-      case (id ~ _ ~ field ~ _ ~ _ ~ expr) => ArrayAssignement(Symbol(id), field, expr)
-    }
   }
 
   lazy val tf_block: PackratParser[Block] = lb ~> tf_statements <~ rb ^^ { statements => Block(statements) }
 
-  lazy val tf_statements: PackratParser[List[Statement]] = tf_statement ~ (rep(tf_statement) ?) ^^ { statements =>
-    statements._2 match {
-      case Some(value) => statements._1 :: value
-      case None => statements._1 :: Nil
-    }
-  }
+  lazy val tf_statements: PackratParser[List[Statement]] = rep(tf_statement)
 
   lazy val tf_statement: PackratParser[Statement] = {
-    tf_block | tf_selection_statement | tf_loop | tf_jump | tf_decl | tf_assign | tf_expr_statement
+    tf_block | tf_selection_statement | tf_loop | tf_jump | tf_decl | tf_expr_statement
   }
 
   lazy val tf_expr_statement: PackratParser[ExpressionStatement] = tf_expr ^^ { expr => ExpressionStatement(expr) }

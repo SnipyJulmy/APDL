@@ -62,6 +62,20 @@ class TfExpressionTest extends FlatSpec {
     }
   }
 
+  def assertThrowsApdlParserException(code: String): Unit = {
+    s"$code" should s"produce an ApdlParserException" in {
+      assertThrows[ApdlParserException] {
+        val res = parser.parse(tf_expr, new PackratReader(new CharSequenceReader(code)))
+        res match {
+          case Success(result, next) =>
+            if (!next.atEnd) throw new ApdlParserException
+            println(result)
+          case _: NoSuccess => throw new ApdlParserException
+        }
+      }
+    }
+  }
+
   def assertCompanionObject(a: Expr, b: Expr): Unit = {
     s"$a and $b" should "produce the same AST" in {
       assert(a == b)
@@ -151,7 +165,22 @@ class TfExpressionTest extends FlatSpec {
   assertAst("1.29", Literal("1.29"))
   assertAst("-123", Literal("-123"))
   assertAst("+123", Literal("+123"))
-
+  assertAst("i[3]", ArrayAccess(Symbol("i"), Literal("3")))
+  assertAst("i[3]-1", Sub(ArrayAccess(Symbol("i"), Literal("3")), Literal("1")))
+  assertAst("i[2][23][3] = 1",
+    VarAssignement(
+      ArrayAccess(
+        ArrayAccess(
+          ArrayAccess(
+            Symbol("i"),
+            Literal("2")
+          ),Literal("23")
+        ),Literal("3")
+      ),
+      Literal("1")
+    ))
+  assertAst("array[9] = 10", VarAssignement(ArrayAccess(Symbol("array"), Literal("9")), Literal("10")))
+  assertAst("array[i] = i", VarAssignement(ArrayAccess(Symbol("array"), Symbol("i")), Symbol("i")))
 
   // Cast expr
   assertAst("(int)3.2", Cast(TfInt(), Literal("3.2")))
@@ -198,4 +227,7 @@ class TfExpressionTest extends FlatSpec {
   assertEquivExpr("x*2", "(x*2)")
   assertEquivExpr("x*2+3", "(x*2)+3")
   assertEquivExpr("3 + (4 * 5)", "3 + 4 * 5")
+
+  /* Wrong expression */
+  assertThrowsApdlParserException("a > x = 3")
 }
