@@ -173,7 +173,6 @@ class ApdlParser extends RegexParsers with PackratParsers {
   lazy val tf_postfix_expr: PackratParser[Expr] = {
     tf_function_call |
       tf_array_access |
-      tf_array_assign |
       tf_primary_expr
   }
 
@@ -182,7 +181,9 @@ class ApdlParser extends RegexParsers with PackratParsers {
   }
 
   lazy val tf_array_access: PackratParser[Expr] = {
-    tf_identifier ~ ("[" ~> tf_expr <~ "]") ^^ { case (id ~ expr) => ArrayAccess(Symbol(id), expr) }
+    tf_identifier ~ rep1("[" ~> tf_expr <~ "]") ^^ { case (id ~ expr) =>
+      expr.tail.foldLeft(ArrayAccess(Symbol(id), expr.head))((acc, elt) => ArrayAccess(acc, elt))
+    }
   }
 
   lazy val tf_atom: PackratParser[Expr] = {
@@ -229,14 +230,8 @@ class ApdlParser extends RegexParsers with PackratParsers {
     tf_identifier ~ ":" ~ tf_typ ^^ { case (id ~ _ ~ typ) => TypedIdentifier(id, typ) }
   }
 
-  lazy val tf_assign: PackratParser[Assignement] = tf_var_assign | tf_array_assign
   lazy val tf_var_assign: PackratParser[VarAssignement] = {
     tf_identifier ~ "=" ~ tf_constant_expr ^^ { case (id ~ _ ~ expr) => VarAssignement(Symbol(id), expr) }
-  }
-  lazy val tf_array_assign: PackratParser[ArrayAssignement] = {
-    tf_identifier ~ "[" ~ tf_expr ~ "]" ~ "=" ~ tf_constant_expr ^^ {
-      case (id ~ _ ~ field ~ _ ~ _ ~ expr) => ArrayAssignement(Symbol(id), field, expr)
-    }
   }
 
   lazy val tf_block: PackratParser[Block] = lb ~> tf_statements <~ rb ^^ { statements => Block(statements) }
@@ -244,7 +239,7 @@ class ApdlParser extends RegexParsers with PackratParsers {
   lazy val tf_statements: PackratParser[List[Statement]] = rep(tf_statement)
 
   lazy val tf_statement: PackratParser[Statement] = {
-    tf_block | tf_selection_statement | tf_loop | tf_jump | tf_decl | tf_assign | tf_expr_statement
+    tf_block | tf_selection_statement | tf_loop | tf_jump | tf_decl | tf_expr_statement
   }
 
   lazy val tf_expr_statement: PackratParser[ExpressionStatement] = tf_expr ^^ { expr => ExpressionStatement(expr) }

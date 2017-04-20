@@ -129,8 +129,8 @@ class EntityTest extends FlatSpec {
         While(
           Greater(Symbol("size"), Literal("0")),
           Block(List(
-            VarAssignement(Symbol("res"), Add(Symbol("res"), ArrayAccess(Symbol("a"), Symbol("size")))),
-            VarAssignement(Symbol("size"), Sub(Symbol("size"), Literal("1")))
+            ExpressionStatement(VarAssignement(Symbol("res"), Add(Symbol("res"), ArrayAccess(Symbol("a"), Symbol("size"))))),
+            ExpressionStatement(VarAssignement(Symbol("size"), Sub(Symbol("size"), Literal("1"))))
           ))
         ),
         Return(Symbol("res"))
@@ -147,4 +147,8 @@ class EntityTest extends FlatSpec {
   t6 should s"throw an ApdlParserException" in {
     assertThrows[ApdlParserException](parseTransform(t6))
   }
+
+  /* Source test */
+
+  /* Server test */
 }

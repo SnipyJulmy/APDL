@@ -275,7 +275,6 @@ class ArduinoGenerator extends ApdlBackendGenerator {
     case SmallerEquals(left, right) => s"${generate(left)} <= ${generate(right)}"
     case Equals(left, right) => s"${generate(left)} == ${generate(right)}"
     case NotEquals(left, right) => s"${generate(left)} != ${generate(right)}"
-    case ArrayAssignement(symbol, field, value) => s"${generate(symbol)}[${generate(field)}] = ${generate(value)};"
     case VarAssignement(symbol, value) => s"${generate(symbol)} = ${generate(value)};"
   }
 
@@ -315,8 +314,6 @@ class ArduinoGenerator extends ApdlBackendGenerator {
       s"""
          |do ${generate(loopBody)} while (${generate(cond)});
        """.stripMargin
-    case VarAssignement(name, newVar) => s"$name = ${generate(newVar)};"
-    case ArrayAssignement(id, field, value) => s"$id[${generate(field)}] = ${generate(value)};"
     case IfThenElse(cond, trueBranch, falseBranch) =>
       s"""
          | if(${generate(cond)}) ${generate(trueBranch)} else ${generate(falseBranch)}
