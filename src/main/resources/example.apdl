@@ -15,5 +15,5 @@ source arduino1 "uno" :
     mac 98:4F:EE:00:81:54
     input temp int from pin 1
     input lum int from pin 0
-    send tf temp to influxdb 1000
-    send lum to influxdb 1000
+    send tf temp to influxdb each 1 m
+    send lum to influxdb each 1 s

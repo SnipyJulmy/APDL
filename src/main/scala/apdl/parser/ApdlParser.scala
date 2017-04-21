@@ -66,27 +66,46 @@ class ApdlParser extends RegexParsers with PackratParsers {
   }
 
   def send: Parser[Send] = generic_send | tf_send
-  def generic_send: Parser[GenericSend] = "send" ~ input_name ~ "to" ~ entity_name ~ sampling_value ^^ {
+  def generic_send: Parser[GenericSend] = "send" ~ input_name ~ "to" ~ entity_name ~ sampling ^^ {
     case (_ ~ input ~ _ ~ target ~ sampling) =>
       GenericSend(target, input, sampling)
   }
 
-  def tf_send: Parser[TfSend] = "send" ~ tf_identifier ~ input_name ~ "to" ~ entity_name ~ sampling_value ^^ {
+  def tf_send: Parser[TfSend] = "send" ~ tf_identifier ~ input_name ~ "to" ~ entity_name ~ sampling ^^ {
     case (_ ~ tf_name ~ input ~ _ ~ target ~ sampling) =>
       TfSend(target, tf_name, input, sampling)
+  }
+
+  def sampling: Parser[Sampling] = periodic_sampling | update_sampling
+  def periodic_sampling: Parser[PeriodicSampling] = "each" ~> sampling_value ~ timeunit ^^ {
+    case (s ~ t) => PeriodicSampling(s, t)
+  }
+  def update_sampling: Parser[UpdateSampling] = "on" ~ "update" ^^ {
+    _ => UpdateSampling()
+  }
+
+  def timeunit: Parser[TimeUnit.EnumVal] = {
+    "ms" ^^ { _ => TimeUnit.MilliSecond } |
+      "s" ^^ { _ => TimeUnit.Second } |
+      "m" ^^ { _ => TimeUnit.Minutes } |
+      "h" ^^ { _ => TimeUnit.Hours }
   }
 
   def sampling_value: Parser[Int] = "[0-9]+".r ^^ {
     _.toInt
   }
 
-  def apdl_type: Parser[ApdlTyp] = _int | _float | _double | _long
-  def _int: Parser[ApdlInt] = "int" ^^ { _ => ApdlInt() }
-  def _float: Parser[ApdlFloat] = "float" ^^ { _ => ApdlFloat() }
-  def _double: Parser[ApdlDouble] = "double" ^^ { _ => ApdlDouble() }
-  def _long: Parser[ApdlLong] = "long" ^^ { _ => ApdlLong() }
+  def apdl_type: Parser[ApdlTyp] = int | float | double | long | short | byte | char | bool
+  lazy val int: Parser[ApdlInt.type] = "int" ^^ { _ => ApdlInt }
+  lazy val float: Parser[ApdlFloat.type] = "float" ^^ { _ => ApdlFloat }
+  lazy val double: Parser[ApdlDouble.type] = "double" ^^ { _ => ApdlDouble }
+  lazy val long: Parser[ApdlLong.type] = "long" ^^ { _ => ApdlLong }
+  lazy val char: Parser[ApdlChar.type] = "char" ^^ { _ => ApdlChar }
+  lazy val byte: Parser[ApdlByte.type] = "byte" ^^ { _ => ApdlByte }
+  lazy val short: Parser[ApdlShort.type] = "short" ^^ { _ => ApdlShort }
+  lazy val bool: Parser[ApdlBool.type] = "bool" ^^ { _ => ApdlBool }
 
-  def board_id: Parser[BoardId] = "\"" ~> "[a-z0-9_][a-z0-9_]*".r <~ "\"" ^^ { case (id) => BoardId(id) }
+  def board_id: Parser[BoardId] = "\"" ~> "[a-zA-Z0-9_][a-zA-Z0-9_-]*".r <~ "\"" ^^ { case (id) => BoardId(id) }
 
   def entity_name: Parser[String] = "[a-zA-Z_][a-zA-Z0-9_]*".r ^^ { str => str }
   def influxdb_property: Parser[InfluxDbProperty] = {
@@ -97,13 +116,17 @@ class ApdlParser extends RegexParsers with PackratParsers {
       property_database ~ property_ip ~ property_port ^^ { case (db ~ ip ~ port) => InfluxDbProperty(ip, port, db) } |
       property_database ~ property_port ~ property_ip ^^ { case (db ~ port ~ ip) => InfluxDbProperty(ip, port, db) }
   }
-  def property_ip: Parser[Ip] = "ip" ~ "([0-9]{1,3}.){3}.([0-9]{1,3})".r ^^ { ip => Ip(ip._2) }
-  def property_mac: Parser[Mac] = "mac" ~ "([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})".r ^^ { mac => Mac(mac._2) }
-  def property_port: Parser[Port] = "port" ~ "[0-9]+".r ^^ { port => Port(port._2.toInt) }
+  def property_ip: Parser[Ip] = "ip" ~> "[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}".r ^^ { ip => Ip(ip) }
+  def property_mac: Parser[Mac] = "mac" ~> "([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})".r ^^ { mac => Mac(mac) }
+  def property_port: Parser[Port] = "port" ~> "[0-9]+".r ^^ { port =>
+    val portValue = port.toInt
+    if (portValue < 1)
+      throw new ApdlDslException("Port is to small")
+    if (portValue > 65535)
+      throw new ApdlDslException("Port is to big")
+    Port(portValue)
+  }
   def property_database: Parser[Database] = "database" ~ "[a-zA-Z_][a-zA-Z0-9_]*".r ^^ { db => Database(db._2) }
-
-  def property_key: Parser[String] = "[a-z_][a-z_]*".r ^^ { str => str }
-  def property_value: Parser[String] = "[a-zA-Z0-9]+".r ^^ { str => str }
 
   /* Transformater script syntax */
 

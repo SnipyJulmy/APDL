@@ -6,6 +6,7 @@ trait ApdlBackendGenerator {
   def generate(entities: List[Entity]): String
 }
 
+// TODO Refactor
 class ArduinoGenerator extends ApdlBackendGenerator {
   override def generate(entities: List[Entity]): String = {
     val main = new StringWriter
@@ -22,10 +23,9 @@ class ArduinoGenerator extends ApdlBackendGenerator {
     var eth_port: String = ""
     var server: String = ""
     var ip: String = ""
-    var mac : String = ""
+    var mac: String = ""
 
     // Pre-generation
-
 
     loop write "timer.update();\n"
 
@@ -33,7 +33,6 @@ class ArduinoGenerator extends ApdlBackendGenerator {
     transformaters.foreach { tf =>
       function write generate(tf.function)
     }
-
 
     // generate servers info
     // the database is global or not for all server ?
@@ -53,7 +52,7 @@ class ArduinoGenerator extends ApdlBackendGenerator {
     }
 
     // generate sources info
-    // TODO multiple source for now, assume just one
+    // TODO multiple source ; for now,we assume that there is just one
     assert(sources.length == 1)
     sources.foreach {
       case GenericSource(name, id, macAddress, ipAddress, inputs, sends) =>
@@ -112,7 +111,13 @@ class ArduinoGenerator extends ApdlBackendGenerator {
                  |}
              """.stripMargin
             }
-            setup write s"timer.every($sampling,send_${_input.name});\n"
+
+            sampling match {
+              case UpdateSampling() =>
+                throw new ApdlDslException("Arduino generation does not support update sampling for the moment")
+              case PeriodicSampling(value, timeUnit) =>
+                setup write s"timer.every(${value * timeUnit.valueInMs},send_${_input.name});\n"
+            }
 
           case TfSend(target, tf, input, sampling) =>
             val _input = {
@@ -157,7 +162,14 @@ class ArduinoGenerator extends ApdlBackendGenerator {
                  |}
              """.stripMargin
             }
-            setup write s"timer.every($sampling,send_${_input.name});\n"
+
+            sampling match {
+              case UpdateSampling() =>
+                throw new ApdlDslException("Arduino generation does not support update sampling for the moment")
+              case PeriodicSampling(value, timeUnit) =>
+                setup write s"timer.every(${value * timeUnit.valueInMs},send_${_input.name});\n"
+            }
+
         }
     }
 
@@ -245,13 +257,14 @@ class ArduinoGenerator extends ApdlBackendGenerator {
   }
 
   def generate(apdlTyp: ApdlTyp): String = apdlTyp match {
-    case ApdlInt() => "int"
-    case ApdlShort() => "short"
-    case ApdlByte() => "byte"
-    case ApdlChar() => "char"
-    case ApdlFloat() => "float"
-    case ApdlDouble() => "double"
-    case ApdlLong() => "long"
+    case ApdlInt => "int"
+    case ApdlShort => "short"
+    case ApdlByte => "byte"
+    case ApdlChar => "char"
+    case ApdlFloat => "float"
+    case ApdlDouble => "double"
+    case ApdlLong => "long"
+    case ApdlBool => "bool"
   }
 
   def generate(expr: Expr): String = expr match {
@@ -260,7 +273,7 @@ class ArduinoGenerator extends ApdlBackendGenerator {
     case Mul(left, right) => s"(${generate(left)} * ${generate(right)})"
     case Sub(left, right) => s"(${generate(left)} - ${generate(right)})"
     case Div(left, right) => s"(${generate(left)} / ${generate(right)})"
-    case ArrayAccess(symbol,field) => s"${generate(symbol)}[${generate(field)}]"
+    case ArrayAccess(symbol, field) => s"${generate(symbol)}[${generate(field)}]"
     case Cast(typ, e) => s"(${generate(typ)})${generate(e)}"
     case Literal(value) => s"$value"
     case FunctionCall(funcName, args) => s"$funcName(${args map generate mkString ","})"
@@ -355,14 +368,13 @@ class ArduinoGenerator extends ApdlBackendGenerator {
   }
 
   def cFormat(apdlTyp: ApdlTyp): String = apdlTyp match {
-    case ApdlInt() => "%d"
-    case ApdlShort() => "%d"
-    case ApdlByte() => "%d"
-    case ApdlChar() => "%c"
-    case ApdlFloat() => "%f"
-    case ApdlDouble() => "%f"
-    case ApdlLong() => "%d"
+    case ApdlInt => "%d"
+    case ApdlShort => "%d"
+    case ApdlByte => "%d"
+    case ApdlChar => "%c"
+    case ApdlFloat => "%f"
+    case ApdlDouble => "%f"
+    case ApdlLong => "%d"
+    case ApdlBool => "%d" // TODO maybe need to be fix
   }
-
-
 }
