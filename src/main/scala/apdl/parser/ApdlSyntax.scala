@@ -52,6 +52,7 @@ case object ApdlChar extends ApdlTyp
 case object ApdlFloat extends ApdlTyp
 case object ApdlDouble extends ApdlTyp
 case object ApdlLong extends ApdlTyp
+case object ApdlBool extends ApdlTyp
 
 sealed trait Property
 case class GenericProperty(key: String, value: String) extends Property

@@ -103,6 +103,7 @@ class ApdlParser extends RegexParsers with PackratParsers {
   lazy val char: Parser[ApdlChar.type] = "char" ^^ { _ => ApdlChar }
   lazy val byte: Parser[ApdlByte.type] = "byte" ^^ { _ => ApdlByte }
   lazy val short: Parser[ApdlShort.type] = "short" ^^ { _ => ApdlShort }
+  lazy val bool: Parser[ApdlBool.type] = "bool" ^^ { _ => ApdlBool }
 
   def board_id: Parser[BoardId] = "\"" ~> "[a-z0-9_][a-z0-9_]*".r <~ "\"" ^^ { case (id) => BoardId(id) }
 
