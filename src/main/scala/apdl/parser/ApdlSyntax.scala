@@ -57,16 +57,7 @@ case object ApdlBool extends ApdlTyp
 sealed trait Property
 case class GenericProperty(key: String, value: String) extends Property
 case class Database(name: String) extends Property
-case class Ip(address: Seq[Int]) extends Property {
-  override def toString: String = {
-    s"""Ip("${address mkString ","}")"""
-  }
-}
-object Ip {
-  def apply(address: String): Ip = {
-    new Ip(address.split("\\.").map(_.toInt).toSeq)
-  }
-}
+case class Ip(address: String) extends Property
 case class Port(number: Int) extends Property
 case class Mac(address: Seq[String]) extends Property
 object Mac {
