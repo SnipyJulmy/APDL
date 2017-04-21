@@ -22,7 +22,7 @@ class ArduinoGenerator extends ApdlBackendGenerator {
     var eth_port: String = ""
     var server: String = ""
     var ip: String = ""
-    var mac : String = ""
+    var mac: String = ""
 
     // Pre-generation
 
@@ -112,7 +112,13 @@ class ArduinoGenerator extends ApdlBackendGenerator {
                  |}
              """.stripMargin
             }
-            setup write s"timer.every($sampling,send_${_input.name});\n"
+
+            sampling match {
+              case UpdateSampling() =>
+                throw new ApdlDslException("Arduino generation does not support update sampling for the moment")
+              case PeriodicSampling(value, timeUnit) =>
+                setup write s"timer.every(${value * timeUnit.valueInMs},send_${_input.name});\n"
+            }
 
           case TfSend(target, tf, input, sampling) =>
             val _input = {
@@ -157,7 +163,14 @@ class ArduinoGenerator extends ApdlBackendGenerator {
                  |}
              """.stripMargin
             }
-            setup write s"timer.every($sampling,send_${_input.name});\n"
+
+            sampling match {
+              case UpdateSampling() =>
+                throw new ApdlDslException("Arduino generation does not support update sampling for the moment")
+              case PeriodicSampling(value, timeUnit) =>
+                setup write s"timer.every(${value * timeUnit.valueInMs},send_${_input.name});\n"
+            }
+
         }
     }
 
@@ -260,7 +273,7 @@ class ArduinoGenerator extends ApdlBackendGenerator {
     case Mul(left, right) => s"(${generate(left)} * ${generate(right)})"
     case Sub(left, right) => s"(${generate(left)} - ${generate(right)})"
     case Div(left, right) => s"(${generate(left)} / ${generate(right)})"
-    case ArrayAccess(symbol,field) => s"${generate(symbol)}[${generate(field)}]"
+    case ArrayAccess(symbol, field) => s"${generate(symbol)}[${generate(field)}]"
     case Cast(typ, e) => s"(${generate(typ)})${generate(e)}"
     case Literal(value) => s"$value"
     case FunctionCall(funcName, args) => s"$funcName(${args map generate mkString ","})"

@@ -66,14 +66,29 @@ class ApdlParser extends RegexParsers with PackratParsers {
   }
 
   def send: Parser[Send] = generic_send | tf_send
-  def generic_send: Parser[GenericSend] = "send" ~ input_name ~ "to" ~ entity_name ~ sampling_value ^^ {
+  def generic_send: Parser[GenericSend] = "send" ~ input_name ~ "to" ~ entity_name ~ sampling ^^ {
     case (_ ~ input ~ _ ~ target ~ sampling) =>
       GenericSend(target, input, sampling)
   }
 
-  def tf_send: Parser[TfSend] = "send" ~ tf_identifier ~ input_name ~ "to" ~ entity_name ~ sampling_value ^^ {
+  def tf_send: Parser[TfSend] = "send" ~ tf_identifier ~ input_name ~ "to" ~ entity_name ~ sampling ^^ {
     case (_ ~ tf_name ~ input ~ _ ~ target ~ sampling) =>
       TfSend(target, tf_name, input, sampling)
+  }
+
+  def sampling: Parser[Sampling] = periodic_sampling | update_sampling
+  def periodic_sampling: Parser[PeriodicSampling] = "each" ~> sampling_value ~ timeunit ^^ {
+    case (s ~ t) => PeriodicSampling(s, t)
+  }
+  def update_sampling: Parser[UpdateSampling] = "on" ~ "update" ^^ {
+    _ => UpdateSampling()
+  }
+
+  def timeunit: Parser[TimeUnit.EnumVal] = {
+    "ms" ^^ { _ => TimeUnit.MilliSecond } |
+      "s" ^^ { _ => TimeUnit.Second } |
+      "m" ^^ { _ => TimeUnit.Minutes } |
+      "h" ^^ { _ => TimeUnit.Hours }
   }
 
   def sampling_value: Parser[Int] = "[0-9]+".r ^^ {
