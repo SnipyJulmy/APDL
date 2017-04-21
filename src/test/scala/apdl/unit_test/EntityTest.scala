@@ -22,6 +22,21 @@ class EntityTest extends FlatSpec {
     }
   }
 
+  def parseSource(code: String): Source = {
+    val parser = new ApdlParser
+    import parser._
+
+    parser.parse(source, new PackratReader[Char](new CharSequenceReader(code))) match {
+      case Success(result, next) =>
+        if (!next.atEnd) {
+          throw new ApdlParserException(s"Unable to completely parse $code\n AST produce : $result")
+        }
+        result
+      case n: NoSuccess =>
+        throw new ApdlParserException(s"Unable to parse $code : $n")
+    }
+  }
+
   /* Transformation Test */
 
   val t1: String =
@@ -149,6 +164,132 @@ class EntityTest extends FlatSpec {
   }
 
   /* Source test */
+  val t7: String =
+    """|source a1 "uno" :
+       | ip 172.16.0.100
+       | mac 00:00:00:00:00:00
+       | input a int from pin 1
+       | input b int from pin 0
+       | input c float from pin 32
+       | send a to asd each 1 s
+       | send b to asd each 2 s
+       | send c to asd each 500 ms""".stripMargin
 
+  val t7Expected: Source = GenericSource(
+    "a1",
+    BoardId("uno"),
+    Mac("00:00:00:00:00:00"),
+    Ip("172.16.0.100"),
+    List(
+      PinInput("a", ApdlInt(), 1),
+      PinInput("b", ApdlInt(), 0),
+      PinInput("c", ApdlFloat(), 32)
+    ),
+    List(
+      GenericSend("asd", "a", PeriodicSampling(1, TimeUnit.Second)),
+      GenericSend("asd", "b", PeriodicSampling(2, TimeUnit.Second)),
+      GenericSend("asd", "c", PeriodicSampling(500, TimeUnit.MilliSecond))
+    )
+  )
+
+  t7 should s"produce $t7Expected" in {
+    assert(parseSource(t7) == t7Expected)
+  }
+
+  val t8: String =
+    """|source a1 "uno" :
+       | ip 172.16.0.100
+       | mac 00:00:00:00:00:00
+       | input a int from pin 1
+       | input b int from pin 0
+       | input c float from pin 32
+       | send a to asd each 1 s
+       | send b to asd on update
+       | send c to asd each 500 ms""".stripMargin
+
+  val t8Expected: Source = GenericSource(
+    "a1",
+    BoardId("uno"),
+    Mac("00:00:00:00:00:00"),
+    Ip("172.16.0.100"),
+    List(
+      PinInput("a", ApdlInt(), 1),
+      PinInput("b", ApdlInt(), 0),
+      PinInput("c", ApdlFloat(), 32)
+    ),
+    List(
+      GenericSend("asd", "a", PeriodicSampling(1, TimeUnit.Second)),
+      GenericSend("asd", "b", UpdateSampling()),
+      GenericSend("asd", "c", PeriodicSampling(500, TimeUnit.MilliSecond))
+    )
+  )
+
+  t8 should s"produce $t8Expected" in {
+    assert(parseSource(t8) == t8Expected)
+  }
+
+  val t9: String =
+    """|source a1 "uno" :
+       | ip 172.16.0.100
+       | mac 00:00:00:00:00:00
+       | input a double from pin 1
+       | input b long
+       | input c float from pin 32
+       | send a to asd on update
+       | send b to asd on update
+       | send c to asd on update""".stripMargin
+
+  val t9Expected: Source = GenericSource(
+    "a1",
+    BoardId("uno"),
+    Mac("00:00:00:00:00:00"),
+    Ip("172.16.0.100"),
+    List(
+      PinInput("a", ApdlDouble(), 1),
+      GenericInput("b", ApdlLong()),
+      PinInput("c", ApdlFloat(), 32)
+    ),
+    List(
+      GenericSend("asd", "a", UpdateSampling()),
+      GenericSend("asd", "b", UpdateSampling()),
+      GenericSend("asd", "c", UpdateSampling())
+    )
+  )
+
+  t9 should s"produce $t9Expected" in {
+    assert(parseSource(t9) == t9Expected)
+  }
+
+  val t10: String =
+    """|source a1 "uno" :
+       | ip 172.16.0.100
+       | mac 00:00:00:00:00:00
+       | input a int from pin 1
+       | input b int from pin 0
+       | input c float from pin 32
+       | send fac a to asd each 1 s
+       | send b to asd each 2 s
+       | send fac c to asd each 500 ms""".stripMargin
+
+  val t10Expected: Source = GenericSource(
+    "a1",
+    BoardId("uno"),
+    Mac("00:00:00:00:00:00"),
+    Ip("172.16.0.100"),
+    List(
+      PinInput("a", ApdlInt(), 1),
+      PinInput("b", ApdlInt(), 0),
+      PinInput("c", ApdlFloat(), 32)
+    ),
+    List(
+      TfSend("asd", "fac", "a", PeriodicSampling(1, TimeUnit.Second)),
+      GenericSend("asd", "b", PeriodicSampling(2, TimeUnit.Second)),
+      TfSend("asd", "fac", "c", PeriodicSampling(500, TimeUnit.MilliSecond))
+    )
+  )
+
+  t10 should s"produce $t10Expected" in {
+    assert(parseSource(t10) == t10Expected)
+  }
   /* Server test */
 }
