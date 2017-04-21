@@ -112,7 +112,7 @@ class ApdlParser extends RegexParsers with PackratParsers {
       property_database ~ property_ip ~ property_port ^^ { case (db ~ ip ~ port) => InfluxDbProperty(ip, port, db) } |
       property_database ~ property_port ~ property_ip ^^ { case (db ~ port ~ ip) => InfluxDbProperty(ip, port, db) }
   }
-  def property_ip: Parser[Ip] = "ip" ~ "([0-9]{1,3}.){3}.([0-9]{1,3})".r ^^ { ip => Ip(ip._2) }
+  def property_ip: Parser[Ip] = "ip" ~ "[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}".r ^^ { ip => Ip(ip._2) }
   def property_mac: Parser[Mac] = "mac" ~ "([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})".r ^^ { mac => Mac(mac._2) }
   def property_port: Parser[Port] = "port" ~ "[0-9]+".r ^^ { port => Port(port._2.toInt) }
   def property_database: Parser[Database] = "database" ~ "[a-zA-Z_][a-zA-Z0-9_]*".r ^^ { db => Database(db._2) }
