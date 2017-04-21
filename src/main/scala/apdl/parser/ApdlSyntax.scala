@@ -34,6 +34,8 @@ object TimeUnit {
   case object Minutes extends EnumVal(1000 * 60)
   case object Hours extends EnumVal(1000 * 60 * 60)
   case object Day extends EnumVal(1000 * 60 * 60 * 24)
+  // (365.25 / 12) * (1000 * 60) = 30.4375 * 60000 = 1826250
+  // Is just for remove cast from double to int
 }
 
 case class Transformater(function: FunctionDecl) extends Entity
@@ -43,13 +45,13 @@ case class GenericSend(target: String, input: String, sampling: Sampling) extend
 case class TfSend(target: String, tf: String, input: String, sampling: Sampling) extends Send(target, sampling)
 
 sealed trait ApdlTyp
-case class ApdlInt() extends ApdlTyp
-case class ApdlShort() extends ApdlTyp
-case class ApdlByte() extends ApdlTyp
-case class ApdlChar() extends ApdlTyp
-case class ApdlFloat() extends ApdlTyp
-case class ApdlDouble() extends ApdlTyp
-case class ApdlLong() extends ApdlTyp
+case object ApdlInt extends ApdlTyp
+case object ApdlShort extends ApdlTyp
+case object ApdlByte extends ApdlTyp
+case object ApdlChar extends ApdlTyp
+case object ApdlFloat extends ApdlTyp
+case object ApdlDouble extends ApdlTyp
+case object ApdlLong extends ApdlTyp
 
 sealed trait Property
 case class GenericProperty(key: String, value: String) extends Property

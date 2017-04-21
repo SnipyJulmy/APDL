@@ -181,9 +181,9 @@ class EntityTest extends FlatSpec {
     Mac("00:00:00:00:00:00"),
     Ip("172.16.0.100"),
     List(
-      PinInput("a", ApdlInt(), 1),
-      PinInput("b", ApdlInt(), 0),
-      PinInput("c", ApdlFloat(), 32)
+      PinInput("a", ApdlInt, 1),
+      PinInput("b", ApdlInt, 0),
+      PinInput("c", ApdlFloat, 32)
     ),
     List(
       GenericSend("asd", "a", PeriodicSampling(1, TimeUnit.Second)),
@@ -213,9 +213,9 @@ class EntityTest extends FlatSpec {
     Mac("00:00:00:00:00:00"),
     Ip("172.16.0.100"),
     List(
-      PinInput("a", ApdlInt(), 1),
-      PinInput("b", ApdlInt(), 0),
-      PinInput("c", ApdlFloat(), 32)
+      PinInput("a", ApdlInt, 1),
+      PinInput("b", ApdlInt, 0),
+      PinInput("c", ApdlFloat, 32)
     ),
     List(
       GenericSend("asd", "a", PeriodicSampling(1, TimeUnit.Second)),
@@ -245,9 +245,9 @@ class EntityTest extends FlatSpec {
     Mac("00:00:00:00:00:00"),
     Ip("172.16.0.100"),
     List(
-      PinInput("a", ApdlDouble(), 1),
-      GenericInput("b", ApdlLong()),
-      PinInput("c", ApdlFloat(), 32)
+      PinInput("a", ApdlDouble, 1),
+      GenericInput("b", ApdlLong),
+      PinInput("c", ApdlFloat, 32)
     ),
     List(
       GenericSend("asd", "a", UpdateSampling()),
@@ -277,9 +277,9 @@ class EntityTest extends FlatSpec {
     Mac("00:00:00:00:00:00"),
     Ip("172.16.0.100"),
     List(
-      PinInput("a", ApdlInt(), 1),
-      PinInput("b", ApdlInt(), 0),
-      PinInput("c", ApdlFloat(), 32)
+      PinInput("a", ApdlInt, 1),
+      PinInput("b", ApdlInt, 0),
+      PinInput("c", ApdlFloat, 32)
     ),
     List(
       TfSend("asd", "fac", "a", PeriodicSampling(1, TimeUnit.Second)),

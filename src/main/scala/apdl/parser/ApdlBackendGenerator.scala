@@ -257,13 +257,13 @@ class ArduinoGenerator extends ApdlBackendGenerator {
   }
 
   def generate(apdlTyp: ApdlTyp): String = apdlTyp match {
-    case ApdlInt() => "int"
-    case ApdlShort() => "short"
-    case ApdlByte() => "byte"
-    case ApdlChar() => "char"
-    case ApdlFloat() => "float"
-    case ApdlDouble() => "double"
-    case ApdlLong() => "long"
+    case ApdlInt => "int"
+    case ApdlShort => "short"
+    case ApdlByte => "byte"
+    case ApdlChar => "char"
+    case ApdlFloat => "float"
+    case ApdlDouble => "double"
+    case ApdlLong => "long"
   }
 
   def generate(expr: Expr): String = expr match {
@@ -367,12 +367,12 @@ class ArduinoGenerator extends ApdlBackendGenerator {
   }
 
   def cFormat(apdlTyp: ApdlTyp): String = apdlTyp match {
-    case ApdlInt() => "%d"
-    case ApdlShort() => "%d"
-    case ApdlByte() => "%d"
-    case ApdlChar() => "%c"
-    case ApdlFloat() => "%f"
-    case ApdlDouble() => "%f"
-    case ApdlLong() => "%d"
+    case ApdlInt => "%d"
+    case ApdlShort => "%d"
+    case ApdlByte => "%d"
+    case ApdlChar => "%c"
+    case ApdlFloat => "%f"
+    case ApdlDouble => "%f"
+    case ApdlLong => "%d"
   }
 }

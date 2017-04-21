@@ -96,10 +96,10 @@ class ApdlParser extends RegexParsers with PackratParsers {
   }
 
   def apdl_type: Parser[ApdlTyp] = _int | _float | _double | _long
-  def _int: Parser[ApdlInt] = "int" ^^ { _ => ApdlInt() }
-  def _float: Parser[ApdlFloat] = "float" ^^ { _ => ApdlFloat() }
-  def _double: Parser[ApdlDouble] = "double" ^^ { _ => ApdlDouble() }
-  def _long: Parser[ApdlLong] = "long" ^^ { _ => ApdlLong() }
+  def _int: Parser[ApdlInt.type] = "int" ^^ { _ => ApdlInt }
+  def _float: Parser[ApdlFloat.type] = "float" ^^ { _ => ApdlFloat }
+  def _double: Parser[ApdlDouble.type] = "double" ^^ { _ => ApdlDouble }
+  def _long: Parser[ApdlLong.type] = "long" ^^ { _ => ApdlLong }
 
   def board_id: Parser[BoardId] = "\"" ~> "[a-z0-9_][a-z0-9_]*".r <~ "\"" ^^ { case (id) => BoardId(id) }
 
