@@ -6,6 +6,7 @@ trait ApdlBackendGenerator {
   def generate(entities: List[Entity]): String
 }
 
+// TODO Refactor
 class ArduinoGenerator extends ApdlBackendGenerator {
   override def generate(entities: List[Entity]): String = {
     val main = new StringWriter
@@ -26,14 +27,12 @@ class ArduinoGenerator extends ApdlBackendGenerator {
 
     // Pre-generation
 
-
     loop write "timer.update();\n"
 
     // generate transformater
     transformaters.foreach { tf =>
       function write generate(tf.function)
     }
-
 
     // generate servers info
     // the database is global or not for all server ?
