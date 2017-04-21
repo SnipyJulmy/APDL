@@ -12,5 +12,6 @@ libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.1" % "test"
 coverageEnabled := true
 
 scalacOptions ++= Seq(
-  "-language:postfixOps"
+  "-language:postfixOps",
+  "-language:implicitConversions"
 )
