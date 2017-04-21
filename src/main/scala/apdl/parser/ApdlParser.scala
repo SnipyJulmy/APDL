@@ -95,7 +95,7 @@ class ApdlParser extends RegexParsers with PackratParsers {
     _.toInt
   }
 
-  def apdl_type: Parser[ApdlTyp] = int | float | double | long | short | byte | char
+  def apdl_type: Parser[ApdlTyp] = int | float | double | long | short | byte | char | bool
   lazy val int: Parser[ApdlInt.type] = "int" ^^ { _ => ApdlInt }
   lazy val float: Parser[ApdlFloat.type] = "float" ^^ { _ => ApdlFloat }
   lazy val double: Parser[ApdlDouble.type] = "double" ^^ { _ => ApdlDouble }
@@ -105,7 +105,7 @@ class ApdlParser extends RegexParsers with PackratParsers {
   lazy val short: Parser[ApdlShort.type] = "short" ^^ { _ => ApdlShort }
   lazy val bool: Parser[ApdlBool.type] = "bool" ^^ { _ => ApdlBool }
 
-  def board_id: Parser[BoardId] = "\"" ~> "[a-z0-9_][a-z0-9_]*".r <~ "\"" ^^ { case (id) => BoardId(id) }
+  def board_id: Parser[BoardId] = "\"" ~> "[a-zA-Z0-9_][a-zA-Z0-9_-]*".r <~ "\"" ^^ { case (id) => BoardId(id) }
 
   def entity_name: Parser[String] = "[a-zA-Z_][a-zA-Z0-9_]*".r ^^ { str => str }
   def influxdb_property: Parser[InfluxDbProperty] = {
