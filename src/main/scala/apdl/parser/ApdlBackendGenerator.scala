@@ -264,6 +264,7 @@ class ArduinoGenerator extends ApdlBackendGenerator {
     case ApdlFloat => "float"
     case ApdlDouble => "double"
     case ApdlLong => "long"
+    case ApdlBool => "bool"
   }
 
   def generate(expr: Expr): String = expr match {
@@ -374,5 +375,6 @@ class ArduinoGenerator extends ApdlBackendGenerator {
     case ApdlFloat => "%f"
     case ApdlDouble => "%f"
     case ApdlLong => "%d"
+    case ApdlBool => "%d" // TODO maybe need to be fix
   }
 }
