@@ -95,11 +95,14 @@ class ApdlParser extends RegexParsers with PackratParsers {
     _.toInt
   }
 
-  def apdl_type: Parser[ApdlTyp] = _int | _float | _double | _long
-  def _int: Parser[ApdlInt.type] = "int" ^^ { _ => ApdlInt }
-  def _float: Parser[ApdlFloat.type] = "float" ^^ { _ => ApdlFloat }
-  def _double: Parser[ApdlDouble.type] = "double" ^^ { _ => ApdlDouble }
-  def _long: Parser[ApdlLong.type] = "long" ^^ { _ => ApdlLong }
+  def apdl_type: Parser[ApdlTyp] = int | float | double | long | short | byte | char
+  lazy val int: Parser[ApdlInt.type] = "int" ^^ { _ => ApdlInt }
+  lazy val float: Parser[ApdlFloat.type] = "float" ^^ { _ => ApdlFloat }
+  lazy val double: Parser[ApdlDouble.type] = "double" ^^ { _ => ApdlDouble }
+  lazy val long: Parser[ApdlLong.type] = "long" ^^ { _ => ApdlLong }
+  lazy val char: Parser[ApdlChar.type] = "char" ^^ { _ => ApdlChar }
+  lazy val byte: Parser[ApdlByte.type] = "byte" ^^ { _ => ApdlByte }
+  lazy val short: Parser[ApdlShort.type] = "short" ^^ { _ => ApdlShort }
 
   def board_id: Parser[BoardId] = "\"" ~> "[a-z0-9_][a-z0-9_]*".r <~ "\"" ^^ { case (id) => BoardId(id) }
 
@@ -116,9 +119,9 @@ class ApdlParser extends RegexParsers with PackratParsers {
   def property_mac: Parser[Mac] = "mac" ~> "([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})".r ^^ { mac => Mac(mac) }
   def property_port: Parser[Port] = "port" ~> "[0-9]+".r ^^ { port =>
     val portValue = port.toInt
-    if(portValue < 1)
+    if (portValue < 1)
       throw new ApdlDslException("Port is to small")
-    if(portValue > 65535)
+    if (portValue > 65535)
       throw new ApdlDslException("Port is to big")
     Port(portValue)
   }
