@@ -19,6 +19,7 @@ class ArduinoGenerator extends ApdlBackendGenerator {
     val sources = entities.filter(_.isInstanceOf[Source]).map(_.asInstanceOf[Source])
     val transformaters = entities.filter(_.isInstanceOf[Transformater]).map(_.asInstanceOf[Transformater])
 
+    // TODO fix var usage
     // global info
     var eth_port: String = ""
     var server: String = ""
