@@ -11,6 +11,33 @@ case class GenericSource(name: String, id: BoardId, mac: Mac, ip: Ip, inputs: Li
 
 case class BoardId(id: String)
 
+sealed trait Visualisation extends Entity
+case class Graph(title: String,
+                 source: String,
+                 aggregator: Aggregator,
+                 plots: Set[PlotType],
+                 unit: String,
+                 min: Double,
+                 max: Double) extends Visualisation
+
+case class Aggregator(aggregateRange : AggregateRange,aggregateFunction: AggregateFunction)
+
+case class AggregateRange(value : Int, timeUnit: TimeUnit.EnumVal)
+
+sealed trait AggregateFunction
+case object Average extends AggregateFunction
+case object Count extends AggregateFunction
+case object Maximum extends AggregateFunction
+case object Median extends AggregateFunction
+case object Minimum extends AggregateFunction
+case object Mode extends AggregateFunction
+case object Sum extends AggregateFunction
+
+sealed trait PlotType
+case object Bar extends PlotType
+case object Line extends PlotType
+case object Point extends PlotType
+
 sealed trait ApdlInput
 case class GenericInput(name: String, typ: ApdlTyp) extends ApdlInput
 case class PinInput(name: String, typ: ApdlTyp, pin: Int) extends ApdlInput

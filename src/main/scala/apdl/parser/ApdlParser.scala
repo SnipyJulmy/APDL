@@ -13,7 +13,7 @@ class ApdlParser extends RegexParsers with PackratParsers {
   def program: Parser[List[Entity]] = entity ~ rep(entity) ^^ { x => x._1 :: x._2 }
 
   def entity: Parser[Entity] = {
-    server | source | transform
+    server | source | transform | visualisation
   }
   def server: Parser[Server] = influxdb
   def influxdb: Parser[InfluxDb] = {
@@ -71,7 +71,7 @@ class ApdlParser extends RegexParsers with PackratParsers {
       GenericSend(target, input, sampling)
   }
 
-  def tf_send: Parser[TfSend] = "send" ~ tf_identifier ~ input_name ~ "to" ~ entity_name ~ sampling ^^ {
+  def tf_send: Parser[TfSend] = "send" ~ identifier ~ input_name ~ "to" ~ entity_name ~ sampling ^^ {
     case (_ ~ tf_name ~ input ~ _ ~ target ~ sampling) =>
       TfSend(target, tf_name, input, sampling)
   }
@@ -127,6 +127,48 @@ class ApdlParser extends RegexParsers with PackratParsers {
     Port(portValue)
   }
   def property_database: Parser[Database] = "database" ~ "[a-zA-Z_][a-zA-Z0-9_]*".r ^^ { db => Database(db._2) }
+
+  def visualisation: Parser[Visualisation] = graph
+  def graph: Parser[Graph] = {
+    "graph" ~> identifier ~ ("from" ~> identifier) ~ (":" ~> aggregator ~ plotTypes ~ unitSI ~ min ~ max) ^^ {
+      case (dataId ~ sourceId ~ (aggregator ~ plotTypes ~ unit ~ min ~ max)) => Graph(
+        dataId,
+        sourceId,
+        aggregator,
+        plotTypes.toSet,
+        unit,
+        min,
+        max
+      )
+    }
+  }
+
+  def aggregator: Parser[Aggregator] = {
+    "aggregate" ~> aggregateRange ~ aggregateFunction ^^ { case (r ~ f) => Aggregator(r, f) }
+  }
+  def aggregateRange: Parser[AggregateRange] = {
+    lp ~> sampling_value ~ timeunit <~ rp ^^ { case (v ~ t) => AggregateRange(v, t) }
+  }
+  def aggregateFunction: Parser[AggregateFunction] = {
+    lp ~> (average | count | maximum | median | minimum | mode | sum) <~ rp
+  }
+  def average: Parser[Average.type] = "average" ^^ { _ => Average }
+  def count: Parser[Count.type] = "count" ^^ { _ => Count }
+  def maximum: Parser[Maximum.type] = "maximum" ^^ { _ => Maximum }
+  def median: Parser[Median.type] = "median" ^^ { _ => Median }
+  def minimum: Parser[Minimum.type] = "minimum" ^^ { _ => Minimum }
+  def mode: Parser[Mode.type] = "mode" ^^ { _ => Mode }
+  def sum: Parser[Sum.type] = "sum" ^^ { _ => Sum }
+
+  def plotTypes: Parser[List[PlotType]] = rep(plotType)
+  def plotType: Parser[PlotType] = bar | line | point
+  def bar: Parser[Bar.type] = "bar" ^^ { _ => Bar }
+  def line: Parser[Line.type] = "line" ^^ { _ => Line }
+  def point: Parser[Point.type] = "point" ^^ { _ => Point }
+
+  def unitSI: Parser[String] = "[a-zA-Z0-9_-]+".r ^^ { str => str }
+  def min: Parser[Double] = "[-+]?[0-9]+.?[0-9]*".r ^^ { str => str.toDouble }
+  def max: Parser[Double] = "[-+]?[0-9]+.?[0-9]*".r ^^ { str => str.toDouble }
 
   /* Transformater script syntax */
 
@@ -204,7 +246,7 @@ class ApdlParser extends RegexParsers with PackratParsers {
   }
 
   lazy val tf_array_access: PackratParser[Expr] = {
-    tf_identifier ~ rep1("[" ~> tf_expr <~ "]") ^^ { case (id ~ expr) =>
+    identifier ~ rep1("[" ~> tf_expr <~ "]") ^^ { case (id ~ expr) =>
       expr.tail.foldLeft(ArrayAccess(Symbol(id), expr.head))((acc, elt) => ArrayAccess(acc, elt))
     }
   }
@@ -224,17 +266,17 @@ class ApdlParser extends RegexParsers with PackratParsers {
   }
 
   lazy val tf_symbol: PackratParser[Symbol] = {
-    tf_identifier ^^ { x => Symbol(x) }
+    identifier ^^ { x => Symbol(x) }
   }
 
   lazy val tf_literal: PackratParser[Literal] = {
     """[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+)""".r ^^ Literal
   }
 
-  lazy val tf_identifier: PackratParser[String] = "[a-zA-Z_][a-zA-Z0-9_]*".r ^^ { str => str }
+  lazy val identifier: PackratParser[String] = "[a-zA-Z_][a-zA-Z0-9_]*".r ^^ { str => str }
 
   lazy val tf_function_call: PackratParser[FunctionCall] =
-    tf_identifier ~ lp ~ tf_function_call_arg ~ rp ^^ {
+    identifier ~ lp ~ tf_function_call_arg ~ rp ^^ {
       case (id ~ _ ~ args ~ _) => FunctionCall(id, args)
     }
 
@@ -250,11 +292,11 @@ class ApdlParser extends RegexParsers with PackratParsers {
   lazy val tf_args: PackratParser[List[TypedIdentifier]] = tf_arg ~ rep("," ~ tf_arg) ^^ { x => x._1 :: x._2.map(_._2) }
 
   lazy val tf_arg: PackratParser[TypedIdentifier] = {
-    tf_identifier ~ ":" ~ tf_typ ^^ { case (id ~ _ ~ typ) => TypedIdentifier(id, typ) }
+    identifier ~ ":" ~ tf_typ ^^ { case (id ~ _ ~ typ) => TypedIdentifier(id, typ) }
   }
 
   lazy val tf_var_assign: PackratParser[VarAssignement] = {
-    tf_identifier ~ "=" ~ tf_constant_expr ^^ { case (id ~ _ ~ expr) => VarAssignement(Symbol(id), expr) }
+    identifier ~ "=" ~ tf_constant_expr ^^ { case (id ~ _ ~ expr) => VarAssignement(Symbol(id), expr) }
   }
 
   lazy val tf_block: PackratParser[Block] = lb ~> tf_statements <~ rb ^^ { statements => Block(statements) }
@@ -281,10 +323,10 @@ class ApdlParser extends RegexParsers with PackratParsers {
 
   lazy val tf_def: PackratParser[FunctionDecl] = "def" ~> tf_def_header ~ tf_def_body ^^ { case (h ~ b) => FunctionDecl(h, b) }
   lazy val tf_def_header: Parser[FunctionHeader] =
-    tf_identifier ~ lp ~ tf_args ~ rp ~ "->" ~ tf_ret_type ^^ {
+    identifier ~ lp ~ tf_args ~ rp ~ "->" ~ tf_ret_type ^^ {
       case (id ~ _ ~ parameters ~ _ ~ "->" ~ ret_type) => FunctionHeader(ret_type, id, parameters)
     } |
-      tf_identifier ~ (lp ~ rp ~ "->" ~> tf_ret_type) ^^ { case (id ~ typ) => FunctionHeader(typ, id, List()) }
+      identifier ~ (lp ~ rp ~ "->" ~> tf_ret_type) ^^ { case (id ~ typ) => FunctionHeader(typ, id, List()) }
   lazy val tf_def_body: PackratParser[FunctionBody] = tf_block ^^ { b => FunctionBody(b) }
 
   lazy val tf_new_array: PackratParser[NewArray] = {

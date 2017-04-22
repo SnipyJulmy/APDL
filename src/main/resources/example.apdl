@@ -17,3 +17,17 @@ source arduino1 "uno" :
     input lum int from pin 0
     send tf temp to influxdb each 1 m
     send lum to influxdb each 1 s
+
+graph temp from influxdb :
+    aggregate(10 s)(mean)
+    plot lines
+    unit celsius_degrees
+    min -20
+    max 40
+
+graph lum from influxdb :
+    aggregate(10 s)(mean)
+    plot lines
+    unit candela
+    min 0
+    max 200
