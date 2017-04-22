@@ -1,39 +1,82 @@
 package apdl.unit_test
 
 import apdl.parser._
+import org.scalacheck.Gen
+import org.scalacheck.Prop._
 import org.scalatest.FlatSpec
+import org.scalatest.prop.Checkers
 
 import scala.util.parsing.input.CharSequenceReader
 
-class EntityTest extends FlatSpec {
+class EntityTest extends FlatSpec with Checkers {
 
-  def parseTransform(code: String): Transformater = {
-    val parser = new ApdlParser
-    import parser._
+  val parser = new ApdlParser
 
-    parser.parse(transform, new PackratReader[Char](new CharSequenceReader(code))) match {
+  import parser._
+
+  def parse[A](code: String, astParser: Parser[A]): A = {
+    parser.parse(astParser, new PackratReader[Char](new CharSequenceReader(code))) match {
       case Success(result, next) =>
-        if (!next.atEnd) {
-          throw new ApdlParserException(s"Unable to completely parse $code")
-        }
+        if (!next.atEnd) throw new ApdlParserException(s"Unable to completely parse $code")
         result
       case n: NoSuccess =>
-        throw new ApdlParserException(s"Unable to parse $code : $n")
+        if (code != "") throw new ApdlParserException(s"Unable to parse $code: $n")
+        else throw new ApdlParserException(s"Unable to parse '': $n")
     }
   }
 
-  def parseSource(code: String): Source = {
-    val parser = new ApdlParser
-    import parser._
+  private def ipGen: Gen[Seq[Int]] = for {
+    a <- Gen.choose(0, 999)
+    b <- Gen.choose(0, 999)
+    c <- Gen.choose(0, 999)
+    d <- Gen.choose(0, 999)
+  } yield Seq(a, b, c, d)
 
-    parser.parse(source, new PackratReader[Char](new CharSequenceReader(code))) match {
-      case Success(result, next) =>
-        if (!next.atEnd) {
-          throw new ApdlParserException(s"Unable to completely parse $code\n AST produce : $result")
-        }
-        result
-      case n: NoSuccess =>
-        throw new ApdlParserException(s"Unable to parse $code : $n")
+  def sampleIp: String = ipGen.sample match {
+    case Some(value) => value mkString "."
+    case None => "0.0.0.0"
+  }
+
+  private val macChar = List(
+    '0', '1', '2', '3', '4', '5',
+    '6', '7', '8', '9', 'a', 'b',
+    'c', 'd', 'e', 'f', 'A', 'B',
+    'C', 'D', 'E', 'F'
+  )
+
+  private def macGen: Gen[Seq[(Char, Char)]] = for {
+    a1 <- Gen.oneOf(macChar)
+    b1 <- Gen.oneOf(macChar)
+    c1 <- Gen.oneOf(macChar)
+    d1 <- Gen.oneOf(macChar)
+    e1 <- Gen.oneOf(macChar)
+    f1 <- Gen.oneOf(macChar)
+    a2 <- Gen.oneOf(macChar)
+    b2 <- Gen.oneOf(macChar)
+    c2 <- Gen.oneOf(macChar)
+    d2 <- Gen.oneOf(macChar)
+    e2 <- Gen.oneOf(macChar)
+    f2 <- Gen.oneOf(macChar)
+  } yield Seq((a1, a2), (b1, b2), (c1, c2), (d1, d2), (e1, e2), (f1, f2))
+
+  def sampleMac: String = macGen.sample match {
+    case Some(value) => value map (x => s"${x._1}${x._2}") mkString ":"
+    case None => "00:00:00:00:00:00"
+  }
+
+  private def portGen: Gen[Int] = for {
+    port <- Gen.choose(1, 65535)
+  } yield port
+
+  def samplePort: String = portGen.sample match {
+    case Some(value) => s"$value"
+    case None => s"1"
+  }
+
+  def sampleIdentifier : String = {
+    (for (id <- Gen.identifier) yield id).sample match {
+      case Some(value) => value
+      case None => "default_identifier"
     }
   }
 
@@ -64,7 +107,7 @@ class EntityTest extends FlatSpec {
             Literal("273.15"))),
         Return(Symbol("temperature"))
       )))))
-    assert(parseTransform(t1) == expected)
+    assert(parse(t1, transform) == expected)
   }
 
   val t2: String =
@@ -77,7 +120,7 @@ class EntityTest extends FlatSpec {
       FunctionHeader(TfInt(), "x", List()),
       FunctionBody(Block(List(Return(Literal("2")))))
     ))
-    assert(parseTransform(t2) == expected)
+    assert(parse(t2, transform) == expected)
   }
 
   val t3: String =
@@ -105,7 +148,7 @@ class EntityTest extends FlatSpec {
       )))
     ))
 
-    assert(parseTransform(t3) == expected)
+    assert(parse(t3, transform) == expected)
   }
 
   val t4: String =
@@ -122,7 +165,7 @@ class EntityTest extends FlatSpec {
         Return(Mul(Symbol("x"), FunctionCall("factorial", List(Sub(Symbol("x"), Literal("1"))))))
       ))))
     ))
-    assert(parseTransform(t4) == expected)
+    assert(parse(t4, transform) == expected)
   }
   val t5: String =
     """|transform def sumArray (a:int[],size:int) -> int {
@@ -151,7 +194,7 @@ class EntityTest extends FlatSpec {
         Return(Symbol("res"))
       )))
     ))
-    assert(parseTransform(t5) == expected)
+    assert(parse(t5, transform) == expected)
   }
 
   val t6: String =
@@ -160,7 +203,7 @@ class EntityTest extends FlatSpec {
        |}""".stripMargin
 
   t6 should s"throw an ApdlParserException" in {
-    assertThrows[ApdlParserException](parseTransform(t6))
+    assertThrows[ApdlParserException](parse(t6, transform))
   }
 
   /* Source test */
@@ -193,7 +236,7 @@ class EntityTest extends FlatSpec {
   )
 
   t7 should s"produce $t7Expected" in {
-    assert(parseSource(t7) == t7Expected)
+    assert(parse(t7, source) == t7Expected)
   }
 
   val t8: String =
@@ -225,7 +268,7 @@ class EntityTest extends FlatSpec {
   )
 
   t8 should s"produce $t8Expected" in {
-    assert(parseSource(t8) == t8Expected)
+    assert(parse(t8, source) == t8Expected)
   }
 
   val t9: String =
@@ -257,7 +300,7 @@ class EntityTest extends FlatSpec {
   )
 
   t9 should s"produce $t9Expected" in {
-    assert(parseSource(t9) == t9Expected)
+    assert(parse(t9, source) == t9Expected)
   }
 
   val t10: String =
@@ -289,7 +332,54 @@ class EntityTest extends FlatSpec {
   )
 
   t10 should s"produce $t10Expected" in {
-    assert(parseSource(t10) == t10Expected)
+    assert(parse(t10, source) == t10Expected)
   }
+
   /* Server test */
+
+  behavior of "influxdb"
+
+  it should "correctly parse and generate the ast of some correct influxdb" in {
+    val influxDbGen = for {
+      name <- Gen.identifier
+      ip <- ipGen
+      port <- portGen
+      dbName <- Gen.identifier
+    } yield (name, ip, port, dbName)
+
+    check {
+      implicit val generatorDrivenConfig = PropertyCheckConfig(minSize = 200, maxSize = 300)
+      forAll(influxDbGen) { infos =>
+        val (name, ip, port, dbName) = infos
+        val code = s"influxdb $name : ip ${ip mkString "."} port $port database $dbName"
+        parse(code, server) == InfluxDb(name, InfluxDbProperty(
+          Ip(ip mkString "."),
+          Port(port),
+          Database(dbName)
+        ))
+      }
+    }
+  }
+
+  it should "throws ApdlParserException for some invalids inputs" in {
+    val wrongCodes = List(
+      s"influxdb asd ip $sampleIp port $samplePort database $sampleIdentifier", // missing ':'
+      s"influxdb 123 ip $sampleIp port $samplePort database $sampleIdentifier", // invalid influxdb id
+      s"influxdb 1-2-3 ip $sampleIp port $samplePort database $sampleIdentifier", // invalid influxdb id
+      s"influxdb a-b ip $sampleIp port $samplePort database $sampleIdentifier", // invalid influxdb id
+      s"influxdb -a ip $sampleIp port $samplePort database $sampleIdentifier", // invalid influxdb id
+      s"influxdb  ip $sampleIp port $samplePort database $sampleIdentifier", // missing id
+      s"influxdb id ip $sampleIp port database $sampleIdentifier", // missing port value
+      s"influxdb id ip port $samplePort database $sampleIdentifier", // missing ip value
+      s"influxdb id ip $sampleIp port $samplePort database ", // missing database value
+      s"influxdb asd $sampleIp port $samplePort database $sampleIdentifier", // missing ip keyword
+      s"influxdb asd ip $sampleIp $samplePort database $sampleIdentifier", // missing port keyword
+      s"influxdb asd ip $sampleIp port $samplePort $sampleIdentifier", // missing database keyword
+      "influxdb source arduino1 \"uno\" :\n    ip 172.16.0.100\n    mac 98:4F:EE:00:81:54\n    input temp int from pin 1\n    input lum int from pin 0\n    send tf temp to influxdb each 1 m\n    send lum to influxdb each 1 s"
+    )
+
+    for(code <- wrongCodes) {
+      assertThrows[ApdlParserException](parse(code,server))
+    }
+  }
 }
