@@ -66,7 +66,10 @@ object ApdlConfig {
   def apply(args: Array[String]): ApdlConfig = {
     if (args.length == 0) throw new ApdlArgsException("Empty arg list")
     // filepath : option -f
-    val filepath = specifyOption("f", 1, args, "No input file specified, use -f [filepath]").head
+    val filepath = specifyOption("f", 1, args, "No input file specified, use -f [filepath]").headOption match {
+      case Some(value) => value
+      case None => throw new RuntimeException("filepath not specified")
+    }
     val target = ApdlTarget.arg2target(specifyOption("t", 1, args, "no target specified, use -t [target]").head)
     val outputFile = specifyOptionalOption("o", 1, args) match {
       case Some(value) => Some(value.head)
