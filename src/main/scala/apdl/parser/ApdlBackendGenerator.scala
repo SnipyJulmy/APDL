@@ -21,7 +21,7 @@ class ArduinoGenerator extends ApdlBackendGenerator {
 
     // TODO fix var usage
     // global info
-    var eth_port: String = ""
+    var ethPort: String = ""
     var server: String = ""
     var ip: String = ""
     var mac: String = ""
@@ -41,11 +41,11 @@ class ArduinoGenerator extends ApdlBackendGenerator {
     servers.foreach {
       case InfluxDb(name, prop) =>
         server = s"${name}_ip"
-        eth_port = s"${name}_port"
+        ethPort = s"${name}_port"
         header.write {
           s"""
              |IPAddress $server(${prop.ip.address mkString ","});
-             |const int $eth_port = ${prop.port.number};
+             |const int $ethPort = ${prop.port.number};
              |const char* ${name}_database_name = "${prop.database.name}";
              |const char* ${name}_database_name_eth = "${prop.database.name},";
          """.stripMargin
@@ -72,16 +72,16 @@ class ArduinoGenerator extends ApdlBackendGenerator {
             header.write(s"${generate(typ)} ${n}_pin = $pin;\n")
         }
         sends.foreach {
-          case GenericSend(target, input, sampling) =>
-            val _input = {
+          case GenericSend(target, inputId, sampling) =>
+            val input = {
               inputs.find {
                 case _: GenericInput =>
                   throw new ApdlDslException("""Arduino don't support generic input, use the "from pin" functionality""")
-                case PinInput(n, _, _) => n == input
+                case PinInput(n, _, _) => n == inputId
               } match {
                 case Some(value) => value.asInstanceOf[PinInput]
                 case None =>
-                  throw new ApdlDslException(s"""No input $input found for send""")
+                  throw new ApdlDslException(s"""No input $inputId found for send""")
               }
             }
 
@@ -100,12 +100,12 @@ class ArduinoGenerator extends ApdlBackendGenerator {
 
             function.write {
               s"""
-                 |void send_${_input.name}() {
-                 |  ${generate(_input.typ)} data = analogRead(${_input.name}_pin);
+                 |void send_${input.name}() {
+                 |  ${generate(input.typ)} data = analogRead(${input.name}_pin);
                  |  int numChars = 0;
                  |  numChars = sprintf(buf,$dbName);
                  |  numChars += sprintf(&buf[numChars],"SOURCE=$name ");
-                 |  numChars += sprintf(&buf[numChars],"$input=${cFormat(_input.typ)},");
+                 |  numChars += sprintf(&buf[numChars],"$inputId=${cFormat(input.typ)},");
                  |  sendData(buf,numChars);
                  |  memset(buf,'\\0',bufferSize);
                  |  // delay(1000); // some small delay
@@ -117,7 +117,7 @@ class ArduinoGenerator extends ApdlBackendGenerator {
               case UpdateSampling() =>
                 throw new ApdlDslException("Arduino generation does not support update sampling for the moment")
               case PeriodicSampling(value, timeUnit) =>
-                setup write s"timer.every(${value * timeUnit.valueInMs},send_${_input.name});\n"
+                setup write s"timer.every(${value * timeUnit.valueInMs},send_${input.name});\n"
             }
 
           case TfSend(target, tf, input, sampling) =>
@@ -178,7 +178,7 @@ class ArduinoGenerator extends ApdlBackendGenerator {
       s"""
          |void sendData(char* data, int dataSize) {
          |  //first we need to connect to InfluxDB server
-         |  int conState = client.connect($server, $eth_port);
+         |  int conState = client.connect($server, $ethPort);
          |
          |  if (conState <= 0) { //check if connection to server is stablished
          |    Serial.print("Could not connect to InfluxDB Server, Error #");
@@ -219,7 +219,7 @@ class ArduinoGenerator extends ApdlBackendGenerator {
          |  delay(2000); // give time to allow connection
          |
          |  //do a fast test if we can connect to server
-         |  int conState = client.connect($server, $eth_port);
+         |  int conState = client.connect($server, $ethPort);
          |
          |  if (conState > 0) {
          |    Serial.println("Connected to InfluxDB server");
