@@ -146,7 +146,9 @@ class ArduinoGenerator extends ApdlBackendGenerator {
               case InfluxDb(n, prop) => s"${n}_database_name_eth"
             }
 
-            val _tf = transformaters.find(t => t.function.header.identifier == tf).get
+            val _tf = transformaters
+              .find(t => t.function.header.identifier == tf)
+              .getOrElse(throw new ApdlDslException("Unspecified header"))
 
             function.write {
               s"""
