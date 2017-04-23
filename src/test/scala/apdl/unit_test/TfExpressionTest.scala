@@ -11,12 +11,12 @@ class TfExpressionTest extends FlatSpec {
   import parser._
 
   def assertEquivExpr(a: String, b: String): Unit = {
-    val resultA = parser.parse(tf_expr, new PackratReader[Char](new CharSequenceReader(a))) match {
+    val resultA = parser.parse(tfExpr, new PackratReader[Char](new CharSequenceReader(a))) match {
       case Success(result, _) => result
       case error: NoSuccess => throw new ApdlParserException(s"can't parse $a -> $error")
     }
 
-    val resultB = parser.parse(tf_expr, new PackratReader[Char](new CharSequenceReader(b))) match {
+    val resultB = parser.parse(tfExpr, new PackratReader[Char](new CharSequenceReader(b))) match {
       case Success(result, _) => result
       case error: NoSuccess => throw new ApdlParserException(s"can't parse $b -> $error")
     }
@@ -27,7 +27,7 @@ class TfExpressionTest extends FlatSpec {
   }
 
   def parseExpr(code: String): Expr = {
-    parser.parse(tf_expr, new PackratReader(new CharSequenceReader(code))) match {
+    parser.parse(tfExpr, new PackratReader(new CharSequenceReader(code))) match {
       case Success(result, next) =>
         if (!next.atEnd) throw new ApdlParserException("Unable to parse $code into an expression")
         result
@@ -36,7 +36,7 @@ class TfExpressionTest extends FlatSpec {
   }
 
   def assertAst(code: String, expected: Expr): Unit = {
-    val result = parser.parse(tf_expr, new PackratReader(new CharSequenceReader(code))) match {
+    val result = parser.parse(tfExpr, new PackratReader(new CharSequenceReader(code))) match {
       case Success(r, _) => r
       case _: NoSuccess =>
         //noinspection NameBooleanParameters
@@ -49,7 +49,7 @@ class TfExpressionTest extends FlatSpec {
   }
 
   def assertBooleanAst(code: String, expected: Expr): Unit = {
-    val result = parser.parse(tf_expr, new PackratReader(new CharSequenceReader(code))) match {
+    val result = parser.parse(tfExpr, new PackratReader(new CharSequenceReader(code))) match {
       case Success(r, _) => r
       case n: NoSuccess =>
         println(n)
@@ -65,7 +65,7 @@ class TfExpressionTest extends FlatSpec {
   def assertThrowsApdlParserException(code: String): Unit = {
     s"$code" should s"produce an ApdlParserException" in {
       assertThrows[ApdlParserException] {
-        val res = parser.parse(tf_expr, new PackratReader(new CharSequenceReader(code)))
+        val res = parser.parse(tfExpr, new PackratReader(new CharSequenceReader(code)))
         res match {
           case Success(result, next) =>
             if (!next.atEnd) throw new ApdlParserException

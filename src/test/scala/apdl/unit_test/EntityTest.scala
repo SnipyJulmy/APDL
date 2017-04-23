@@ -14,7 +14,7 @@ class EntityTest extends FlatSpec with Checkers {
 
   import parser._
 
-  def parse[A](code: String, astParser: Parser[A]): A = {
+  private def parse[A](code: String, astParser: Parser[A]): A = {
     parser.parse(astParser, new PackratReader[Char](new CharSequenceReader(code))) match {
       case Success(result, next) =>
         if (!next.atEnd) throw new ApdlParserException(s"Unable to completely parse $code")
@@ -32,7 +32,7 @@ class EntityTest extends FlatSpec with Checkers {
     d <- Gen.choose(0, 999)
   } yield Seq(a, b, c, d)
 
-  def sampleIp: String = ipGen.sample match {
+  private def sampleIp: String = ipGen.sample match {
     case Some(value) => value mkString "."
     case None => "0.0.0.0"
   }
@@ -59,7 +59,7 @@ class EntityTest extends FlatSpec with Checkers {
     f2 <- Gen.oneOf(macChar)
   } yield Seq((a1, a2), (b1, b2), (c1, c2), (d1, d2), (e1, e2), (f1, f2))
 
-  def sampleMac: String = macGen.sample match {
+  private def sampleMac: String = macGen.sample match {
     case Some(value) => value map (x => s"${x._1}${x._2}") mkString ":"
     case None => "00:00:00:00:00:00"
   }
@@ -68,17 +68,29 @@ class EntityTest extends FlatSpec with Checkers {
     port <- Gen.choose(1, 65535)
   } yield port
 
-  def samplePort: String = portGen.sample match {
+  private def samplePort: String = portGen.sample match {
     case Some(value) => s"$value"
     case None => s"1"
   }
 
-  def sampleIdentifier : String = {
+  private def sampleIdentifier: String = {
     (for (id <- Gen.identifier) yield id).sample match {
       case Some(value) => value
       case None => "default_identifier"
     }
   }
+
+  private def graphGen = for {
+    title <- Gen.identifier
+    source <- Gen.identifier
+    rangeSize <- Gen.choose(1, 100)
+    timeUnit <- Gen.oneOf(TimeUnit.values)
+    function <- Gen.oneOf(AggregateFunction.values)
+    plotTypes <- Gen.nonEmptyListOf(Gen.oneOf(PlotType.values))
+    unit <- Gen.identifier
+    min <- Gen.choose(-1000, 1000)
+    max <- Gen.choose(-1000, 1000) suchThat (max => max > min)
+  } yield Graph(title, source, Aggregator(AggregateRange(rangeSize, timeUnit), function), plotTypes, unit, min, max)
 
   /* Transformation Test */
 
@@ -335,6 +347,40 @@ class EntityTest extends FlatSpec with Checkers {
     assert(parse(t10, source) == t10Expected)
   }
 
+  behavior of "source"
+
+  it should "produce an ApdlParserException if mac or ip is not set" in {
+    val t1 =
+      """|source a1 "uno" :
+         | ip 172.16.0.100
+         | input a int from pin 1
+         | input b int from pin 0
+         | input c float from pin 32
+         | send fac a to asd each 1 s
+         | send b to asd each 2 s
+         | send fac c to asd each 500 ms""".stripMargin
+    val t2 =
+      """|source a1 "uno" :
+         | mac 00:00:00:00:00:00
+         | input a int from pin 1
+         | input b int from pin 0
+         | input c float from pin 32
+         | send fac a to asd each 1 s
+         | send b to asd each 2 s
+         | send fac c to asd each 500 ms""".stripMargin
+    val t3 =
+      """|source a1 "uno" :
+         | input a int from pin 1
+         | input b int from pin 0
+         | input c float from pin 32
+         | send fac a to asd each 1 s
+         | send b to asd each 2 s
+         | send fac c to asd each 500 ms""".stripMargin
+    assertThrows[ApdlParserException](parse(t1, entity))
+    assertThrows[ApdlParserException](parse(t2, entity))
+    assertThrows[ApdlParserException](parse(t3, entity))
+  }
+
   /* Server test */
 
   behavior of "influxdb"
@@ -348,9 +394,9 @@ class EntityTest extends FlatSpec with Checkers {
     } yield (name, ip, port, dbName)
 
     check {
-      implicit val generatorDrivenConfig = PropertyCheckConfig(minSize = 200, maxSize = 300)
-      forAll(influxDbGen) { infos =>
-        val (name, ip, port, dbName) = infos
+      implicit val generatorDrivenConfig = PropertyCheckConfiguration(minSize = 200, sizeRange = 300)
+      forAll(influxDbGen) { info =>
+        val (name, ip, port, dbName) = info
         val code = s"influxdb $name : ip ${ip mkString "."} port $port database $dbName"
         parse(code, server) == InfluxDb(name, InfluxDbProperty(
           Ip(ip mkString "."),
@@ -378,8 +424,93 @@ class EntityTest extends FlatSpec with Checkers {
       "influxdb source arduino1 \"uno\" :\n    ip 172.16.0.100\n    mac 98:4F:EE:00:81:54\n    input temp int from pin 1\n    input lum int from pin 0\n    send tf temp to influxdb each 1 m\n    send lum to influxdb each 1 s"
     )
 
-    for(code <- wrongCodes) {
-      assertThrows[ApdlParserException](parse(code,server))
+    for (code <- wrongCodes) {
+      assertThrows[ApdlParserException](parse(code, server))
+    }
+  }
+
+  behavior of "graph"
+
+  it should "correctly parse some various graph entity" in {
+    check {
+      implicit val generatorDrivenConfig = PropertyCheckConfiguration(minSize = 300, sizeRange = 500)
+      forAll(graphGen) { g =>
+        val code =
+          s"""|graph ${g.title} from ${g.source} :
+              |aggregate(${g.aggregator.aggregateRange.value} ${g.aggregator.aggregateRange.timeUnit.toApdlKeyword})(${g.aggregator.aggregateFunction.toApdlKeyword})
+              |plot ${g.plots.map(_.toApdlKeyword) mkString " "}
+              |unit ${g.unit}
+              |min ${g.min}
+              |max ${g.max}""".stripMargin
+        parse(code, graph) == g
+      }
+    }
+  }
+
+  behavior of "aggregateRange"
+
+  it should "parse some correct range" in {
+    check {
+      val gen = for {
+        value <- Gen.choose(1, Int.MaxValue)
+        timeUnit <- Gen.oneOf(TimeUnit.values)
+      } yield AggregateRange(value, timeUnit)
+
+      forAll(gen) { range =>
+        parse(s"(${range.value} ${range.timeUnit.toApdlKeyword})", aggregateRange) == range
+      }
+    }
+  }
+
+  it should "thrown an ApdlParserException for smaller than 1 input value" in {
+    check {
+      val gen = for {
+        value <- Gen.choose(-Int.MaxValue, 0)
+        timeUnit <- Gen.oneOf(TimeUnit.values)
+      } yield AggregateRange(value, timeUnit)
+
+      forAll(gen) { range =>
+        throws(classOf[ApdlParserException])(parse(s"(${range.value} ${range.timeUnit.toApdlKeyword})", aggregateRange))
+      }
+    }
+  }
+
+  it should "thrown an ApdlParserException for incorrect timeUnit" in {
+    check {
+      val gen = for {
+        value <- Gen.choose(1, Int.MaxValue)
+        timeUnit <- Gen.alphaStr suchThat (s => !TimeUnit.values.map(_.toApdlKeyword).contains(s))
+      } yield (value, timeUnit)
+
+      forAll(gen) { range =>
+        throws(classOf[ApdlParserException])(parse(s"(${range._1} ${range._2})", aggregateRange))
+      }
+    }
+  }
+
+  behavior of "aggregateFunction"
+
+  it should "parse all the AggregateFunction values" in {
+    check {
+      val gen = for {
+        v <- Gen.oneOf(AggregateFunction.values)
+      } yield v
+
+      forAll(gen) { v =>
+        parse(s"(${v.toApdlKeyword})", aggregateFunction) == v
+      }
+    }
+  }
+
+  it should "produce an ApdlParserException for others values" in {
+    check {
+      val gen = for {
+        v <- Gen.alphaStr suchThat(s => ! AggregateFunction.values.map(_.toApdlKeyword).contains(s))
+      } yield v
+
+      forAll(gen) { v =>
+        throws(classOf[ApdlParserException])(parse(s"($v)", aggregateFunction))
+      }
     }
   }
 }

@@ -12,9 +12,9 @@ import scala.util.parsing.input.CharSequenceReader
 
 class ApdlDslTest extends FlatSpec with Checkers {
 
-  implicit override val generatorDrivenConfig = PropertyCheckConfig(
+  implicit override val generatorDrivenConfig = PropertyCheckConfiguration(
     minSize = 100,
-    maxSize = 300,
+    sizeRange = 300,
     workers = 4
   )
 
@@ -243,7 +243,7 @@ class ApdlDslTest extends FlatSpec with Checkers {
   it should "throw an exception when the type is unknow" in {
     val typeList = List("float", "int", "double", "byte", "short", "char", "long")
     val wrongTypeGen = for {
-      a <- Gen.alphaStr suchThat (s => !typeList.contains(s))
+      a <- Gen.alphaStr suchThat (s => !typeList.contains(s) && s != "")
     } yield a
 
     check {
