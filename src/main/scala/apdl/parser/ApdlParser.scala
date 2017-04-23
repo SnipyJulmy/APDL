@@ -88,7 +88,8 @@ class ApdlParser extends RegexParsers with PackratParsers {
     "ms" ^^ { _ => TimeUnit.MilliSecond } |
       "s" ^^ { _ => TimeUnit.Second } |
       "m" ^^ { _ => TimeUnit.Minutes } |
-      "h" ^^ { _ => TimeUnit.Hours }
+      "h" ^^ { _ => TimeUnit.Hours } |
+      "d" ^^ { _ => TimeUnit.Day }
   }
 
   def sampling_value: Parser[Int] = "[0-9]+".r ^^ {
@@ -135,7 +136,7 @@ class ApdlParser extends RegexParsers with PackratParsers {
         dataId,
         sourceId,
         aggregator,
-        plotTypes.toSet,
+        plotTypes,
         unit,
         min,
         max
@@ -149,26 +150,26 @@ class ApdlParser extends RegexParsers with PackratParsers {
   def aggregateRange: Parser[AggregateRange] = {
     lp ~> sampling_value ~ timeunit <~ rp ^^ { case (v ~ t) => AggregateRange(v, t) }
   }
-  def aggregateFunction: Parser[AggregateFunction] = {
+  def aggregateFunction: Parser[AggregateFunction.EnumVal] = {
     lp ~> (average | count | maximum | median | minimum | mode | sum) <~ rp
   }
-  def average: Parser[Average.type] = "average" ^^ { _ => Average }
-  def count: Parser[Count.type] = "count" ^^ { _ => Count }
-  def maximum: Parser[Maximum.type] = "maximum" ^^ { _ => Maximum }
-  def median: Parser[Median.type] = "median" ^^ { _ => Median }
-  def minimum: Parser[Minimum.type] = "minimum" ^^ { _ => Minimum }
-  def mode: Parser[Mode.type] = "mode" ^^ { _ => Mode }
-  def sum: Parser[Sum.type] = "sum" ^^ { _ => Sum }
+  def average: Parser[AggregateFunction.EnumVal] = "average" ^^ { _ => AggregateFunction.Average }
+  def count: Parser[AggregateFunction.EnumVal] = "count" ^^ { _ => AggregateFunction.Count }
+  def maximum: Parser[AggregateFunction.EnumVal] = "maximum" ^^ { _ => AggregateFunction.Maximum }
+  def median: Parser[AggregateFunction.EnumVal] = "median" ^^ { _ => AggregateFunction.Median }
+  def minimum: Parser[AggregateFunction.EnumVal] = "minimum" ^^ { _ => AggregateFunction.Minimum }
+  def mode: Parser[AggregateFunction.EnumVal] = "mode" ^^ { _ => AggregateFunction.Mode }
+  def sum: Parser[AggregateFunction.EnumVal] = "sum" ^^ { _ => AggregateFunction.Sum }
 
-  def plotTypes: Parser[List[PlotType]] = rep(plotType)
-  def plotType: Parser[PlotType] = bar | line | point
-  def bar: Parser[Bar.type] = "bar" ^^ { _ => Bar }
-  def line: Parser[Line.type] = "line" ^^ { _ => Line }
-  def point: Parser[Point.type] = "point" ^^ { _ => Point }
+  def plotTypes: Parser[List[PlotType.EnumVal]] = "plot" ~> rep(plotType)
+  def plotType: Parser[PlotType.EnumVal] = bar | line | point
+  def bar: Parser[PlotType.Bar.type] = "bar" ^^ { _ => PlotType.Bar }
+  def line: Parser[PlotType.Line.type] = "line" ^^ { _ => PlotType.Line }
+  def point: Parser[PlotType.Point.type] = "point" ^^ { _ => PlotType.Point }
 
-  def unitSI: Parser[String] = "[a-zA-Z0-9_-]+".r ^^ { str => str }
-  def min: Parser[Double] = "[-+]?[0-9]+.?[0-9]*".r ^^ { str => str.toDouble }
-  def max: Parser[Double] = "[-+]?[0-9]+.?[0-9]*".r ^^ { str => str.toDouble }
+  def unitSI: Parser[String] = "unit" ~> "[a-zA-Z0-9_-]+".r ^^ { str => str }
+  def min: Parser[Double] = "min" ~> "[-+]?[0-9]+.?[0-9]*".r ^^ { str => str.toDouble }
+  def max: Parser[Double] = "max" ~> "[-+]?[0-9]+.?[0-9]*".r ^^ { str => str.toDouble }
 
   /* Transformater script syntax */
 
