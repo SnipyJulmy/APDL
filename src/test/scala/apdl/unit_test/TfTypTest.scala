@@ -14,7 +14,7 @@ class TfTypTest extends FlatSpec {
   import parser._
 
   def parseTyp(code: String): TfRetTyp = {
-    parser.parse(tf_ret_type, new PackratReader(new CharSequenceReader(code))) match {
+    parser.parse(tfRetType, new PackratReader(new CharSequenceReader(code))) match {
       case Success(result, next) =>
         if (next.atEnd) result
         else throw new ApdlParserException(s"Something is not parse : ${next.source}")
@@ -47,7 +47,7 @@ class TfTypTest extends FlatSpec {
       val depth = r.nextInt(maxRecArray) + 1 // avoid 0
       val typ = randomTyp()
       val code = s"${Utils.strTyp(typ)}${"[]" * depth}"
-      val ast = parser.parse(tf_ret_type, new PackratReader(new CharSequenceReader(code))) match {
+      val ast = parser.parse(tfRetType, new PackratReader(new CharSequenceReader(code))) match {
         case Success(result, _) => result
         case _: NoSuccess => fail()
       }

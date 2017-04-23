@@ -12,7 +12,7 @@ class TfStatementTest extends FlatSpec {
   import parser._
 
   def assertAst(code: String, expected: Statement): Unit = {
-    val result = parser.parse(tf_statement, new PackratReader(new CharSequenceReader(code))) match {
+    val result = parser.parse(tfStatement, new PackratReader(new CharSequenceReader(code))) match {
       case Success(r, _) => r
       case _: NoSuccess =>
         //noinspection NameBooleanParameters
