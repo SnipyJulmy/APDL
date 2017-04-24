@@ -1,14 +1,32 @@
 package apdl.parser
 
-import java.io.StringWriter
+import java.io.{File, StringWriter}
 
 trait ApdlBackendGenerator {
-  def generate(entities: List[Entity]): String
+  def generate(outputDir: File, entities: List[Entity]): Unit
 }
 
 // TODO Refactor
 class ArduinoGenerator extends ApdlBackendGenerator {
-  override def generate(entities: List[Entity]): String = {
+
+  def processOutputDir(outputDir: File, overrideExistingOutput: Boolean = true): Unit = {
+    if (outputDir.exists()) {
+      if (outputDir.isDirectory) {
+        if (overrideExistingOutput) {
+          if (!outputDir.delete())
+            throw new ApdlBackendException(s"Unable to delete ${outputDir.getPath} directory")
+        }
+      } else {
+        throw new ApdlBackendException(s"File ${outputDir.getPath} is not a directory")
+      }
+    } else {
+      if (!outputDir.mkdirs()) {
+        throw new ApdlBackendException(s"Unable to create ${outputDir.getPath}")
+      }
+    }
+  }
+
+  override def generate(outputDir: File, entities: List[Entity]): Unit = {
     val main = new StringWriter
     val loop = new StringWriter
     val setup = new StringWriter
@@ -120,16 +138,16 @@ class ArduinoGenerator extends ApdlBackendGenerator {
                 setup write s"timer.every(${value * timeUnit.valueInMs},send_${input.name});\n"
             }
 
-          case TfSend(target, tf, input, sampling) =>
+          case TfSend(target, tf, inputId, sampling) =>
             val input = {
               inputs.find {
                 case _: GenericInput =>
                   throw new ApdlDslException("""Arduino don't support generic input, use the "from pin" functionality""")
-                case PinInput(n, _, _) => n == input
+                case PinInput(n, _, _) => n == inputId
               } match {
                 case Some(value) => value.asInstanceOf[PinInput]
                 case None =>
-                  throw new ApdlDslException(s"""No input $input found for send""")
+                  throw new ApdlDslException(s"""No input $inputId found for send""")
               }
             }
 
@@ -188,7 +206,7 @@ class ArduinoGenerator extends ApdlBackendGenerator {
          |    return;
          |  }
          |
-       |  //Send HTTP header and buffer
+         |  //Send HTTP header and buffer
          |  client.println("POST /write?db=arduino HTTP/1.1");
          |  client.println("Host: www.embedonix.com");
          |  client.println("User-Agent: Arduino/1.0");
@@ -235,27 +253,29 @@ class ArduinoGenerator extends ApdlBackendGenerator {
      """.stripMargin
     }
 
-    s"""
-       |#include <Ethernet.h>
-       |#include <Timer.h>
-       |
+    // TODO generate apdl project
+
+      s"""
+         |#include <Ethernet.h>
+         |#include <Timer.h>
+         |
        |EthernetClient client;
-       |Timer timer;
-       |
+         |Timer timer;
+         |
        |const int bufferSize = 2048;
-       |char buf[bufferSize] = {'\\0'};
-       |
+         |char buf[bufferSize] = {'\\0'};
+         |
        |$header
-       |
+         |
        |$function
-       |
+         |
        |void setup() {
-       |  $setup
-       |}
-       |
+         |  $setup
+         |}
+         |
        |void loop() {
-       |  $loop
-       |}
+         |  $loop
+         |}
      """.stripMargin
   }
 
