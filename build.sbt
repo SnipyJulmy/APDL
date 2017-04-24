@@ -16,5 +16,6 @@ coverageEnabled := true
 scalacOptions ++= Seq(
   "-language:postfixOps",
   "-language:implicitConversions",
-  "-deprecation"
+  "-deprecation",
+  "-ea"
 )
