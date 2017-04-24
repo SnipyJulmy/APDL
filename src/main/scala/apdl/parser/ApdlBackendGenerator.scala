@@ -121,7 +121,7 @@ class ArduinoGenerator extends ApdlBackendGenerator {
             }
 
           case TfSend(target, tf, input, sampling) =>
-            val _input = {
+            val input = {
               inputs.find {
                 case _: GenericInput =>
                   throw new ApdlDslException("""Arduino don't support generic input, use the "from pin" functionality""")
@@ -152,13 +152,13 @@ class ArduinoGenerator extends ApdlBackendGenerator {
 
             function.write {
               s"""
-                 |void send_${_input.name}() {
-                 |  ${generate(_input.typ)} rawData = analogRead(${_input.name}_pin);
+                 |void send_${input.name}() {
+                 |  ${generate(input.typ)} rawData = analogRead(${input.name}_pin);
                  |  ${generate(_tf.function.header.resultType)} data = $tf(rawData);
                  |  int numChars = 0;
                  |  numChars = sprintf(buf,$dbName);
                  |  numChars += sprintf(&buf[numChars],"SOURCE=$name ");
-                 |  numChars += sprintf(&buf[numChars],"$input=${cFormat(_input.typ)},");
+                 |  numChars += sprintf(&buf[numChars],"$input=${cFormat(input.typ)},");
                  |  sendData(buf,numChars);
                  |  memset(buf,'\\0',bufferSize);
                  |  // delay(1000); // some small delay
@@ -170,7 +170,7 @@ class ArduinoGenerator extends ApdlBackendGenerator {
               case UpdateSampling() =>
                 throw new ApdlDslException("Arduino generation does not support update sampling for the moment")
               case PeriodicSampling(value, timeUnit) =>
-                setup write s"timer.every(${value * timeUnit.valueInMs},send_${_input.name});\n"
+                setup write s"timer.every(${value * timeUnit.valueInMs},send_${input.name});\n"
             }
 
         }
