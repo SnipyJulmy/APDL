@@ -23,3 +23,11 @@ class ApdlArgsException(s: String) extends Throwable {
     s"$s ${super.toString}"
   }
 }
+
+class ApdlBackendException(s: String) extends Throwable {
+  def this() = this("")
+
+  override def toString: String = {
+    s"$s ${super.toString}"
+  }
+}
