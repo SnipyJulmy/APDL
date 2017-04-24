@@ -1,83 +1,81 @@
 package apdl.parser
 
-import java.io.{File, PrintWriter}
+import java.io.File
 
+import apdl.parser.ApdlTarget.ApdlTarget
+import com.github.SnipyJulmy.scalacolor.ScalaColor._
+
+import scala.io.Source
 import scala.language.postfixOps
+import scala.util.Try
 import scala.util.parsing.input.CharSequenceReader
 
-// TODO Args parsing + main app
+case class ApdlConfig(file: File = new File("."),
+                      target: ApdlTarget = ApdlTarget.default,
+                      outputDirectory: File = new File("./default-apdl-output"))
+
 object Main extends App {
 
-  val config = ApdlConfig(args)
-
-  val src = scala.io.Source.fromFile(new File(config.filepath)) mkString
+  val config = parse(args)
   val parser = new ApdlParser
 
   import parser._
 
   // TODO optimize result, verification, semantic analysis
 
-  val code = parser.parse(parser.program, new PackratReader[Char](new CharSequenceReader(src)))
+  val codeStr: String = {
+    Source.fromFile(config.file).mkString
+  }
+  val code = parser.parse(parser.program, new PackratReader[Char](new CharSequenceReader(codeStr)))
   code match {
     case Success(result, _) =>
       // TODO specify generator
-      val generatedCode = (new ArduinoGenerator).generate(result)
-      config.outputFile match {
-        case Some(value) =>
-          val outputFile = new File(value)
-          val pw = new PrintWriter(outputFile)
-          pw.write(generatedCode)
-          pw.flush()
-          pw.close()
-        case None =>
-          println(generatedCode)
+      val backend = new ArduinoGenerator
+      Try {
+        backend.generate(config.outputDirectory, result)
+      } match {
+        case util.Failure(exception) => exception match {
+          case e: ApdlBackendException =>
+            println(s"Generation failed : ${e.getMessage}".red)
+            System.exit(1)
+          case _ =>
+            println(exception)
+        }
+        case util.Success(_) =>
+          println("Compilation end successfully".blue)
       }
-    case error: NoSuccess => println(s"error... : $error")
+    case error: NoSuccess =>
+      println(s"Parse error : $error".red)
   }
 
-}
+  def parse(args: Array[String]): ApdlConfig = {
+    implicit val apdlTargetRead: scopt.Read[ApdlTarget.Value] =
+      scopt.Read.reads(ApdlTarget withName)
 
-case class ApdlConfig(filepath: String, target: ApdlTarget, outputFile: Option[String])
+    val argsParser = new scopt.OptionParser[ApdlConfig]("apdl") {
+      // Metadata
+      head("apdl", "1.0")
 
-object ApdlConfig {
+      // Argument
+      arg[File]("<file>")
+        .action((f, c) => c.copy(file = f))
 
-  def specifyOption(optionName: String, nbArg: Int, args: Array[String], errorMissingMsg: String): List[String] = {
-    if (!args.contains(s"-$optionName")) throw new ApdlArgsException(errorMissingMsg)
-    val index = args.indexOf(s"-$optionName")
-    for (i <- 1 to nbArg) {
-      if (args(index + i).beginWith("-"))
-        throw new ApdlArgsException(s"command arg #$i specified after -$optionName is incorrect")
+      // Optional args
+      opt[ApdlTarget]('t', "target")
+        .action((t, c) => c.copy(target = t))
+        .text("targeting framework")
+
+      opt[File]('d', "dir")
+        .action((o, c) => c.copy(outputDirectory = o))
+        .text("Output directory")
     }
-    args.slice(index + 1, index + nbArg + 1).toList
-  }
 
-  def specifyOptionalOption(optionName: String, nbArg: Int, args: Array[String]): Option[List[String]] = {
-    if (!args.contains(s"-$optionName")) None
-    else {
-      val index = args.indexOf(s"-$optionName")
-      for (i <- 1 to nbArg) {
-        if (args(index + i).beginWith("-"))
-          throw new ApdlArgsException(s"command arg #$i specified after -$optionName is incorrect")
-      }
-      Some(args.slice(index + 1, index + nbArg + 1).toList)
-    }
-  }
-
-  def apply(args: Array[String]): ApdlConfig = {
-    if (args.length == 0) throw new ApdlArgsException("Empty arg list")
-    // filepath : option -f
-    val filepath = specifyOption("f", 1, args, "No input file specified, use -f [filepath]").headOption match {
+    argsParser.parse(args, ApdlConfig()) match {
       case Some(value) => value
-      case None => throw new RuntimeException("filepath not specified")
+      case None =>
+        System.exit(0)
+        throw new Exception("Unreachable code")
     }
-    val target = ApdlTarget.arg2target(specifyOption("t", 1, args, "no target specified, use -t [target]").head)
-    val outputFile = specifyOptionalOption("o", 1, args) match {
-      case Some(value) => Some(value.head)
-      case None => None
-    }
-    ApdlConfig(filepath, target, outputFile)
-  }
-  implicit class ApdlArgs(str: String) {
-    def beginWith(prefix: String): Boolean = str.reverse.endsWith(prefix.reverse)
   }
 }
+
