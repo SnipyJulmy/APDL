@@ -19,18 +19,34 @@ setup = "AnalogIn @id(A@pin);"
 expr = "@id"
 
 [component.communication.serial]
-input = "BASIC"
+input = [
+    "INT",
+    "LONG",
+    "STR",
+    "BOOL",
+    "FLOAT",
+    "DOUBLE",
+    "CHAR"
+]
 [component.communication.serial.parameters]
 bauds = "INT"
 [component.communication.generators.arduino]
 statement = "Serial.println(@input)"
 [component.communication.generators.mbed]
 setup = "Serial @id(USBTX,USBRC);"
-statement = """@id.printf("@input\n")"""
+statement = "@id.printf(@strEscape(@input\n)"
 
 [component.communication.http]
-input = "BASIC"
-[component.communication.serial.parameters]
+input = [
+    "INT",
+    "LONG",
+    "STR",
+    "BOOL",
+    "FLOAT",
+    "DOUBLE",
+    "CHAR"
+]
+[component.communication.http.parameters]
 ip = "IP_ADDRESS"
 mac = "MAC_ADDRESS"
 

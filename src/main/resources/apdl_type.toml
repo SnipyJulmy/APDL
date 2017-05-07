@@ -101,9 +101,3 @@ declarators = [
     ["arduino" , "bool @identifier = @0;"],
     ["c" , "int @identifier = @0;"]
 ]
-
-[type.BASIC]
-value = "@"
-require = [
-    "@ : Boolean || @ : Char || @ : Int || @ : Double || @ : Float || @ : Long || @ : String"
-]
