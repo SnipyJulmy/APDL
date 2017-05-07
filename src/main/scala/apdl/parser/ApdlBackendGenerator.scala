@@ -1,9 +1,11 @@
 package apdl.parser
 
-import java.io.{File, StringWriter}
+import java.io.{File, PrintWriter, StringWriter}
+
+import scala.sys.process._
 
 trait ApdlBackendGenerator {
-  def generate(outputDir: File, entities: List[Entity]): Unit
+  def generate(config: ApdlConfig, entities: List[Entity]): Unit
 }
 
 // TODO Refactor
@@ -26,17 +28,55 @@ class ArduinoGenerator extends ApdlBackendGenerator {
     }
   }
 
-  override def generate(outputDir: File, entities: List[Entity]): Unit = {
-    val main = new StringWriter
-    val loop = new StringWriter
-    val setup = new StringWriter
-    val function = new StringWriter
-    val header = new StringWriter
+  def generate(generationType: ApdlGenerationType.Value, server: Server): Unit = generationType match {
+    case ApdlGenerationType.Debug =>
+    // TODO Generate docker-compose file
+    case ApdlGenerationType.Production =>
+      // TODO generate dockerfile
+    case _ => throw new ApdlBackendException(s"Unknow generation type : $generationType")
+  }
 
+  override def generate(config: ApdlConfig, entities: List[Entity]): Unit = {
+    // Assume outputDir exist
+    assert(config.outputDirectory.exists())
+
+    // recover all entity
     val servers = entities.filter(_.isInstanceOf[Server]).map(_.asInstanceOf[Server])
-    val sources = entities.filter(_.isInstanceOf[Source]).map(_.asInstanceOf[Source])
+    val sources = entities.filter(_.isInstanceOf[ApdlSource]).map(_.asInstanceOf[ApdlSource])
     val transformaters = entities.filter(_.isInstanceOf[Transformater]).map(_.asInstanceOf[Transformater])
+    val visualisations = entities.filter(_.isInstanceOf[Visualisation]).map(_.asInstanceOf[Visualisation])
 
+    // If it's a debug generation type, we generate a docker-compose file for testing the project
+
+    // Generate a dockerfile for each server
+    for (server <- servers) {
+      generate(config.generationType, server)
+    }
+
+    // Generate a project for each source
+    for (source <- sources) {
+      val projectDirPath = s"${config.outputDirectory.getAbsolutePath}/${source.name}"
+      val projectDir = new File(projectDirPath)
+      if (!projectDir.mkdir()) throw new ApdlBackendException(s"Unable to create directory $projectDirPath")
+      s"platformio init -d $projectDirPath -b ${source.id.id}" !
+
+      // solve library error
+      val iniFile = new File(s"$projectDirPath/platformio.ini")
+      if (!iniFile.exists()) throw new ApdlBackendException(s"Ini file don't exist for project $projectDirPath")
+      val iniPw = new PrintWriter(iniFile)
+      iniPw.append("lib_force = SPI").flush()
+      iniPw.close()
+
+      // Stream for code generation of the arduino for a single project
+      val loop = new StringWriter // the loop function body in the arduino language
+      val setup = new StringWriter // the setup function body in the arduino language
+      val function = new StringWriter // some function for the setup and loop function, like callback
+      val header = new StringWriter // header of all the other code, for global variable
+
+      // TODO lib directory
+    }
+
+    /*
     // TODO fix var usage
     // global info
     var ethPort: String = ""
@@ -255,28 +295,29 @@ class ArduinoGenerator extends ApdlBackendGenerator {
 
     // TODO generate apdl project
 
-      s"""
-         |#include <Ethernet.h>
-         |#include <Timer.h>
-         |
+    s"""
+       |#include <Ethernet.h>
+       |#include <Timer.h>
+       |
        |EthernetClient client;
-         |Timer timer;
-         |
+       |Timer timer;
+       |
        |const int bufferSize = 2048;
-         |char buf[bufferSize] = {'\\0'};
-         |
+       |char buf[bufferSize] = {'\\0'};
+       |
        |$header
-         |
+       |
        |$function
-         |
+       |
        |void setup() {
-         |  $setup
-         |}
-         |
+       |  $setup
+       |}
+       |
        |void loop() {
-         |  $loop
-         |}
+       |  $loop
+       |}
      """.stripMargin
+     */
   }
 
   def generate(apdlTyp: ApdlTyp): String = apdlTyp match {
