@@ -1,0 +1,65 @@
+[component.source.digitalInput]
+type = "INT"
+[component.source.digitalInput.parameters]
+pin = "INT"
+[component.source.digitalInput.generators.arduino]
+expr = "digitalRead(@pin)"
+[component.source.digitalInput.generators.mbed]
+setup = "DigitalIn @id(p@pin);"
+expr = "@id"
+
+[component.source.analogInput]
+type = "INT"
+[component.source.analogInput.parameters]
+pin = "INT"
+[component.source.analogInput.generators.arduino]
+expr = "analogRead(@pin)"
+[component.source.analogInput.generators.mbed]
+setup = "AnalogIn @id(A@pin);"
+expr = "@id"
+
+[component.communication.serial]
+input = "BASIC"
+[component.communication.serial.parameters]
+bauds = "INT"
+[component.communication.generators.arduino]
+statement = "Serial.println(@input)"
+[component.communication.generators.mbed]
+setup = "Serial @id(USBTX,USBRC);"
+statement = """@id.printf("@input\n")"""
+
+[component.communication.http]
+input = "BASIC"
+[component.communication.serial.parameters]
+ip = "IP_ADDRESS"
+mac = "MAC_ADDRESS"
+
+[component.server.influxdb]
+[component.server.influxdb.parameters]
+ip = "IP_ADDRESS"
+port = "PORT"
+[component.server.influxdb.docker-compose]
+image = "influxdb:latest"
+container_name = "influxdb"
+ports = [
+    "8086:8086"
+]
+expose = [
+    "8086"
+]
+volumes = [
+    "./data/influxdb:/var/lib/influxdb"
+]
+[component.server.influxdb.docker]
+from = "influxdb:latest"
+maintainer = "Sylvain julmy (sylvain.julmy@gmail.com)"
+run = []
+volume = [
+    "./data/influxdb:/var/lib/influxdb"
+]
+expose = [
+    "8086"
+]
+cmd = [
+    "supervisord -n"
+]
