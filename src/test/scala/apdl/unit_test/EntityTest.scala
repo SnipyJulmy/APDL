@@ -230,7 +230,7 @@ class EntityTest extends FlatSpec with Checkers {
        | send b to asd each 2 s
        | send c to asd each 500 ms""".stripMargin
 
-  val t7Expected: Source = GenericSource(
+  val t7Expected: ApdlSource = GenericSource(
     "a1",
     BoardId("uno"),
     Mac("00:00:00:00:00:00"),
@@ -262,7 +262,7 @@ class EntityTest extends FlatSpec with Checkers {
        | send b to asd on update
        | send c to asd each 500 ms""".stripMargin
 
-  val t8Expected: Source = GenericSource(
+  val t8Expected: ApdlSource = GenericSource(
     "a1",
     BoardId("uno"),
     Mac("00:00:00:00:00:00"),
@@ -294,7 +294,7 @@ class EntityTest extends FlatSpec with Checkers {
        | send b to asd on update
        | send c to asd on update""".stripMargin
 
-  val t9Expected: Source = GenericSource(
+  val t9Expected: ApdlSource = GenericSource(
     "a1",
     BoardId("uno"),
     Mac("00:00:00:00:00:00"),
@@ -326,7 +326,7 @@ class EntityTest extends FlatSpec with Checkers {
        | send b to asd each 2 s
        | send fac c to asd each 500 ms""".stripMargin
 
-  val t10Expected: Source = GenericSource(
+  val t10Expected: ApdlSource = GenericSource(
     "a1",
     BoardId("uno"),
     Mac("00:00:00:00:00:00"),
