@@ -1,0 +1,42 @@
+project_name = "Example"
+dependencies = [
+    "apdl_type.toml",
+    "apdl_component.toml"
+]
+
+[server.influxdb.server1]
+ip = "160.98.61.150"
+port = 8086
+database = "example"
+
+[source.arduino.arduino1]
+id = "uno"
+
+[input.digitalInput.rawTemp]
+pin = 1
+
+[function.tf]
+function = "tf_transform.apdl"
+input = "INT"
+output = "FLOAT"
+
+[communication.serial.arduinoSerial]
+bauds = 9600
+
+[wire.rawTemp.tf.temp]
+
+[wire.sourceInput.arduino1.rawTemp]
+[wire.transform.rawTemp.tf.temp]
+[wire.send.rawTemp.server1]
+
+# wire/5 --> wiring input from a source to a server by a communication
+[wire.arduino1.temp.influxdb.ethernet]
+
+# wire/2 --> wiring input with a component
+[wire.arduino1.rawTemp]
+[wire.temp.server1]
+
+# wire/3 --> transformation application
+[wire.rawTemp.tf.temp]
+[wire.temp._.temp]
+[wire.temp._.temp2]
