@@ -6,8 +6,11 @@ sealed trait Server extends Entity
 case class InfluxDb(name: String, prop: InfluxDbProperty) extends Server
 case class InfluxDbProperty(ip: Ip, port: Port, database: Database)
 
-sealed trait Source extends Entity
-case class GenericSource(name: String, id: BoardId, mac: Mac, ip: Ip, inputs: List[ApdlInput], sends: List[Send]) extends Source
+sealed trait ApdlSource extends Entity {
+  val name : String
+  val id : BoardId
+}
+case class GenericSource(name: String, id: BoardId, mac: Mac, ip: Ip, inputs: List[ApdlInput], sends: List[Send]) extends ApdlSource
 
 case class BoardId(id: String)
 

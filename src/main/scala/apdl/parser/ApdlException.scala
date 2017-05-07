@@ -31,3 +31,11 @@ class ApdlBackendException(s: String) extends Throwable {
     s"$s ${super.toString}"
   }
 }
+
+class ApdlFormatException(s: String) extends ApdlParserException {
+  def this() = this("")
+
+  override def toString: String = {
+    s"$s ${super.toString}"
+  }
+}

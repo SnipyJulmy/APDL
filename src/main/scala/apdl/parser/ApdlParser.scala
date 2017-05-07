@@ -20,7 +20,7 @@ class ApdlParser extends RegexParsers with PackratParsers {
     "influxdb" ~ entity_name ~ ":" ~ influxdb_property ^^ { case ("influxdb" ~ name ~ ":" ~ prop) => InfluxDb(name, prop) }
   }
 
-  def source: Parser[Source] = generic_source
+  def source: Parser[ApdlSource] = generic_source
   def generic_source: Parser[GenericSource] = "source" ~ entity_name ~ board_id ~ ":" ~ rep(property_ip | property_mac | input | send) ^^ {
     case ("source" ~ entity_name ~ board_id ~ ":" ~ xs) =>
       GenericSource(
