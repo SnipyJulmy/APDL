@@ -32,7 +32,8 @@ class MainParser(apdlConfig: ApdlConfig) {
 
     val fullToml = new Toml().read(full.toString)
     val types = TypesParser(fullToml)
-    val components = ComponentsParser(fullToml)
+    val components = ComponentsParser(fullToml,types)
+    components.foreach(println)
     ApdlProject(projectName, dependencies)
   }
 }

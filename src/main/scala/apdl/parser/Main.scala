@@ -14,7 +14,7 @@ case class ApdlConfig(mainFile: File = new File("."),
 object Main extends App {
 
   val apdlParser = new MainParser(parse(args))
-  println(apdlParser.parseFile())
+  val project = apdlParser.parseFile()
 
   def parse(args: Array[String]): ApdlConfig = {
 
