@@ -30,9 +30,9 @@ input = [
 ]
 [component.communication.serial.parameters]
 bauds = "INT"
-[component.communication.generators.arduino]
+[component.communication.serial.generators.arduino]
 statement = "Serial.println(@input)"
-[component.communication.generators.mbed]
+[component.communication.serial.generators.mbed]
 setup = "Serial @id(USBTX,USBRC);"
 statement = "@id.printf(@strEscape(@input\n)"
 
