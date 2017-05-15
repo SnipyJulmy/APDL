@@ -1,4 +1,5 @@
 project_name = "Example"
+framework = "arduino"
 dependencies = [
     "apdl_type.toml",
     "apdl_component.toml"
@@ -12,8 +13,11 @@ database = "example"
 [source.arduino.arduino1]
 id = "uno"
 
-[input.digitalInput.temp]
+[input.analogInput.rawTemp]
 pin = 1
+
+[input.analogInput.lum]
+pin = 0
 
 [function.tf]
 function = "tf_transform.apdl"
