@@ -13,6 +13,7 @@ case class Literal(value: String) extends Expr
 case class Symbol(name: String) extends Expr
 case class FunctionCall(funcName: String, args: List[Expr]) extends Expr
 case class ArrayAccess(array : Expr,field : Expr) extends Expr
+case class VarAssignement(target: Expr, value: Expr) extends Expr
 
 // Bool
 case class True() extends Expr
@@ -56,7 +57,6 @@ case class Break() extends Statement
 case class Continue() extends Statement
 case class Block(statements: List[Statement]) extends Statement
 case class ExpressionStatement(expression: Expr) extends Statement
-case class VarAssignement(target: Expr, value: Expr) extends Expr
 
 sealed trait Declaration extends Statement
 case class FunctionDecl(header: FunctionHeader, body: FunctionBody) extends Declaration

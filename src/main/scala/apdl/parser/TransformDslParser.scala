@@ -199,8 +199,8 @@ trait TransformDslParser extends RegexParsers with PackratParsers {
     }
   }
 
-  lazy val tfSelectionStatement: PackratParser[Statement] = tf_if_then_else | tfIfThen
-  lazy val tf_if_then_else: PackratParser[IfThenElse] = "if" ~ lp ~ tfExpr ~ rp ~ tfStatement ~ "else" ~ tfStatement ^^ {
+  lazy val tfSelectionStatement: PackratParser[Statement] = tfIfThenElse | tfIfThen
+  lazy val tfIfThenElse: PackratParser[IfThenElse] = "if" ~ lp ~ tfExpr ~ rp ~ tfStatement ~ "else" ~ tfStatement ^^ {
     case (_ ~ _ ~ cond ~ _ ~ trueBranch ~ _ ~ falseBranch) => IfThenElse(cond, trueBranch, falseBranch)
   }
   lazy val tfIfThen: PackratParser[IfThen] = "if" ~ lp ~ tfExpr ~ rp ~ tfStatement ^^ {
