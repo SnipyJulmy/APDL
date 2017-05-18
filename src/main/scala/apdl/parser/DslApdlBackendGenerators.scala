@@ -6,7 +6,7 @@ import apdl.parser.ApdlType.{Id, Num, Str}
   * An code generators which target the apdl language itself
   * Primarly use for test and try
   */
-object ApdlBackendGenerators {
+object DslApdlBackendGenerators {
 
   def toApdlCode(define: Define): String = define match {
     case DefineInput(name, parameters, gens) =>

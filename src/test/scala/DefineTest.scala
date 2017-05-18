@@ -117,37 +117,37 @@ class DefineTest extends FlatSpec with Checkers {
     import CaseClassGenerators._
     check {
       forAll(typGen) { t =>
-        val code = ApdlBackendGenerators.toApdlCode(t)
+        val code = DslApdlBackendGenerators.toApdlCode(t)
         val ast = parse(code, apdlType)
         ast == t
       }
       forAll(parameterGen) { x =>
-        val code = ApdlBackendGenerators.toApdlCode(x)
+        val code = DslApdlBackendGenerators.toApdlCode(x)
         val ast = parse(code, parameter)
         ast == x
       }
       forAll(genGen) { x =>
-        val code = ApdlBackendGenerators.toApdlCode(x)
+        val code = DslApdlBackendGenerators.toApdlCode(x)
         val ast = parse(code, genBody)
         ast == x
       }
       forAll(genGens) { x =>
-        val code = ApdlBackendGenerators.toApdlCode(x)
+        val code = DslApdlBackendGenerators.toApdlCode(x)
         val ast = parse(code, gens)
         ast == x
       }
       forAll(inGen) { x =>
-        val code = ApdlBackendGenerators.toApdlCode(x)
+        val code = DslApdlBackendGenerators.toApdlCode(x)
         val ast = parse(code, inputs)
         ast == x
       }
       forAll(outGen) { x =>
-        val code = ApdlBackendGenerators.toApdlCode(x)
+        val code = DslApdlBackendGenerators.toApdlCode(x)
         val ast = parse(code, output)
         ast == x
       }
       forAll(defineComponentGen) { x =>
-        val code = ApdlBackendGenerators.toApdlCode(x.asInstanceOf[Define])
+        val code = DslApdlBackendGenerators.toApdlCode(x.asInstanceOf[Define])
         val ast = parse(code, define)
         ast match {
           case _: DefineInput => false
@@ -155,7 +155,7 @@ class DefineTest extends FlatSpec with Checkers {
         }
       }
       forAll(defineInputGen) { x =>
-        val code = ApdlBackendGenerators.toApdlCode(x.asInstanceOf[Define])
+        val code = DslApdlBackendGenerators.toApdlCode(x.asInstanceOf[Define])
         val ast = parse(code, define)
         ast match {
           case input: DefineInput => input == x
