@@ -24,7 +24,7 @@ project_name = "Example"
     @serial temp each 1 s
 }
 
-@def tf (x:int) -> float {
+@define transform tf (x:int) -> float {
     val B : int = 3975
     val resistance : float = (float)(1023 - x) * 1000 / x
     val temperature : float = 1 / (log(resistance/1000) / B + 1 / 298.15) - 273.15

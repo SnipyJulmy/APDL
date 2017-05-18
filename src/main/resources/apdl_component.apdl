@@ -37,4 +37,10 @@
         loop = ""
         expr = "@x @op @y"
     }
+    @gen arduino {
+        global = ""
+        setup = ""
+        loop = ""
+        expr = "@x @op @y"
+    }
 }
