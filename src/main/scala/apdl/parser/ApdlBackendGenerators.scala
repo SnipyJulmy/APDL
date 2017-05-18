@@ -3,6 +3,7 @@ package apdl.parser
 import apdl.parser.ApdlType.{Id, Num, Str}
 
 object ApdlBackendGenerators {
+
   def toApdlCode(define: Define): String = define match {
     case DefineInput(name, parameters, gens) =>
       s"""
@@ -42,4 +43,14 @@ object ApdlBackendGenerators {
        |loop = "${gen.loop}"
        |expr = "${gen.expr}"
      """.stripMargin
+
+  def toApdlCode(x: Map[String, Gen]): String = x.map { case (k, v) =>
+    s"""
+       |@gen $k {
+       | ${toApdlCode(v)}
+       |}
+    """.stripMargin
+  } mkString "\n"
+
+  def toApdlCode(parameters : Seq[Parameter]) : String = parameters.map(toApdlCode).mkString(" ")
 }
