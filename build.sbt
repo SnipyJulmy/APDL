@@ -6,14 +6,10 @@ scalaVersion := "2.12.1"
 
 resolvers += Resolver.sonatypeRepo("public")
 
-resolvers += Resolver.bintrayRepo("jvican", "releases")
-
 libraryDependencies += "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.5"
 libraryDependencies += "org.scalactic" %% "scalactic" % "3.0.1"
 libraryDependencies += "com.github.scopt" %% "scopt" % "3.5.0"
 libraryDependencies += "com.github.SnipyJulmy" %% "scalacolor" % "1.0"
-libraryDependencies += "me.vican.jorge" %% "stoml" % "0.3"
-libraryDependencies += "com.moandjiezana.toml" % "toml4j" % "0.7.1"
 
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.0.1" % "test"
 libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.13.4" % "test"
