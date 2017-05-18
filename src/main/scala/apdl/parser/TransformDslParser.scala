@@ -6,7 +6,7 @@ import scala.language.postfixOps
 import scala.util.parsing.combinator.{PackratParsers, RegexParsers}
 
 /* Transformater script syntax */
-class TransformDslParser extends RegexParsers with PackratParsers {
+trait TransformDslParser extends RegexParsers with PackratParsers {
 
   // Types
   lazy val tfRetType: PackratParser[TfRetTyp] = tfVoid | tfTyp
@@ -159,7 +159,10 @@ class TransformDslParser extends RegexParsers with PackratParsers {
     tfNewVal | tfNewArray | tfNewVar | tfFunctionDeclaration
   }
 
-  lazy val tfFunctionDeclaration: PackratParser[FunctionDecl] = "def" ~> tfFunctionHeader ~ tfFunctionBody ^^ { case (h ~ b) => FunctionDecl(h, b) }
+  lazy val tfFunctionDeclaration: PackratParser[FunctionDecl] = {
+    "def" ~> tfFunctionHeader ~ tfFunctionBody ^^ { case (h ~ b) => FunctionDecl(h, b) }
+  }
+
   lazy val tfFunctionHeader: Parser[FunctionHeader] =
     identifier ~ lp ~ tfArgs ~ rp ~ "->" ~ tfRetType ^^ {
       case (id ~ _ ~ parameters ~ _ ~ "->" ~ ret_type) => FunctionHeader(ret_type, id, parameters)
