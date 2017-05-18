@@ -1,5 +1,4 @@
-package apdl.unit_test
-
+import apdl.ApdlParserException
 import apdl.parser._
 import org.scalatest.FlatSpec
 
@@ -7,7 +6,7 @@ import scala.util.parsing.input.CharSequenceReader
 
 class TfStatementTest extends FlatSpec {
 
-  val parser = new ApdlParser
+  val parser = new TransformDslParser {}
 
   import parser._
 

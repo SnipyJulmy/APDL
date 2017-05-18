@@ -1,13 +1,12 @@
-package apdl.unit_test
-
+import apdl.ApdlParserException
 import apdl.parser._
 import org.scalatest.FlatSpec
 
 import scala.util.parsing.input.CharSequenceReader
 
 class TfExpressionTest extends FlatSpec {
-  val parser = new ApdlParser
 
+  val parser = new TransformDslParser {}
   import parser._
 
   def assertEquivExpr(a: String, b: String): Unit = {
