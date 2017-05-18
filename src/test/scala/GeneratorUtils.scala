@@ -99,5 +99,5 @@ object CaseClassGenerators {
     id <- Gen.identifier
     params <- Gen.listOf(parameterGen)
     gens <- genGens suchThat(m => m.nonEmpty)
-  } yield DefineInput(id, params, gens
+  } yield DefineInput(id, params, gens)
 }
