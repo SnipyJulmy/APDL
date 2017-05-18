@@ -2,19 +2,18 @@ package apdl.parser
 
 import java.io.File
 
-import apdl.parser.ApdlGenerationType.ApdlGenerationType
 import com.github.SnipyJulmy.scalacolor.ScalaColor._
 
+import scala.io.Source
 import scala.language.postfixOps
+import scala.util.parsing.input.CharSequenceReader
 
-case class ApdlConfig(mainFile: File = new File("."),
-                      outputDirectory: File = new File("./default-apdl-output"),
-                      generationType: ApdlGenerationType = ApdlGenerationType.default)
+case class ApdlConfig(
+                       mainFile: File = new File("."),
+                       outputDirectory: File = new File("./default-apdl-output")
+                     )
 
 object Main extends App {
-
-  val apdlParser = new MainParser(parse(args))
-  val project = apdlParser.parseFile()
 
   def parse(args: Array[String]): ApdlConfig = {
 
@@ -41,3 +40,18 @@ object Main extends App {
   }
 }
 
+object DefineTry extends App {
+  val file = "./src/main/resources/apdl_component.apdl"
+  val componentFile = new File(file)
+  val source = Source.fromFile(componentFile).mkString
+  val parser = new DefineParsers
+
+  import parser._
+
+  parser.parse(parser.defines, new PackratReader[Char](new CharSequenceReader(source))) match {
+    case Success(result, next) =>
+      println(next.atEnd)
+      result.foreach(println)
+    case n: NoSuccess => println(s"error : $n".red)
+  }
+}

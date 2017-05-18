@@ -5,14 +5,14 @@ import apdl.parser.ApdlType.{Id, Num, Str}
 import scala.util.matching.Regex
 import scala.util.parsing.combinator.{PackratParsers, RegexParsers}
 
-class DefineParsers extends RegexParsers with PackratParsers {
+class DefineParsers extends TransformDslParser with RegexParsers with PackratParsers {
 
   override protected val whiteSpace: Regex = "[ \t\r\f\n]+".r
   override def skipWhitespace: Boolean = true
   val ws: Regex = whiteSpace
 
   lazy val defines: PackratParser[List[Define]] = rep(define)
-  lazy val define: PackratParser[Define] = "@define" ~> (defineComponent | defineInput)
+  lazy val define: PackratParser[Define] = "@define" ~> (defineComponent | defineInput | defineTransform)
 
   lazy val defineComponent: PackratParser[DefineComponent] = {
     "component" ~> identifier ~ parameters ~ lb ~ defineComponentBody ~ rb ^^ {
@@ -23,6 +23,7 @@ class DefineParsers extends RegexParsers with PackratParsers {
   lazy val defineComponentBody: PackratParser[(List[Parameter], ApdlType, Map[String, Gen])] = {
     inputs ~ output ~ gens ^^ { case (i ~ o ~ g) => (i, o, g) }
   }
+
 
   lazy val inputs: PackratParser[List[Parameter]] = "@in" ~> parameters
   lazy val output: PackratParser[ApdlType] = "@out" ~> apdlType
@@ -50,13 +51,14 @@ class DefineParsers extends RegexParsers with PackratParsers {
   lazy val str: PackratParser[ApdlType.Str.type] = "str" ^^^ ApdlType.Str
   lazy val id: PackratParser[ApdlType.Id.type] = "id" ^^^ ApdlType.Id
 
-  lazy val identifier: PackratParser[String] = "[a-zA-Z_][a-zA-Z0-9_]*".r ^^ { str => str }
   lazy val parameters: PackratParser[List[Parameter]] = rep(parameter)
   lazy val parameter: PackratParser[Parameter] = identifier ~ (":" ~> apdlType) ^^ { case (i ~ t) => Parameter(i, t) }
-  lazy val lb = "{"
-  lazy val rb = "}"
 
   lazy val number: PackratParser[String] = "[-+]?[0-9]+.?[0-9]*".r ^^ { str => str }
+
+  lazy val defineTransform : PackratParser[DefineTransform] = {
+    "transform" ~> tfFunctionDeclaration ^^ {f => DefineTransform(f)}
+  }
 }
 
 case class Inputs(parameters: List[Parameter])
@@ -66,6 +68,7 @@ case class Gen(global: String, setup: String, loop: String, expr: String)
 sealed trait Define
 case class DefineInput(name: String, parameters: List[Parameter], gens: Map[String, Gen]) extends Define
 case class DefineComponent(name: String, parameters: List[Parameter], inputs: List[Parameter], outputType: ApdlType, gens: Map[String, Gen]) extends Define
+case class DefineTransform(functionDecl: FunctionDecl) extends Define
 
 case class Parameter(id: String, typ: ApdlType)
 
