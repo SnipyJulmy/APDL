@@ -1,4 +1,4 @@
-package apdl.parser
+package apdl
 
 class ApdlDslException(s: String) extends Throwable {
   def this() = this("")
