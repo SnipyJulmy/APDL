@@ -1,6 +1,4 @@
-package apdl.unit_test
-
-import apdl.Utils
+import apdl.{ApdlParserException, Utils}
 import apdl.parser._
 import org.scalatest.FlatSpec
 
@@ -9,7 +7,7 @@ import scala.util.parsing.input.CharSequenceReader
 import scala.util.{Random, Try}
 
 class TfTypTest extends FlatSpec {
-  val parser = new ApdlParser
+  val parser = new TransformDslParser {}
 
   import parser._
 

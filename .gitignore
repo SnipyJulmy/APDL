@@ -29,3 +29,10 @@ project/plugins/project/
 /apdl-gen/
 /apdl-test/
 /example.ino
+/src/main/resources/apdl_component.toml
+/src/main/resources/apdl_type.toml
+/src/main/resources/apdl_http.toml
+/src/main/resources/example.scala
+/src/main/resources/example.toml
+/src/main/resources/example.saml
+/bak/

@@ -1,83 +1,57 @@
 package apdl.parser
 
-import java.io.{File, PrintWriter}
+import java.io.File
 
+import com.github.SnipyJulmy.scalacolor.ScalaColor._
+
+import scala.io.Source
 import scala.language.postfixOps
 import scala.util.parsing.input.CharSequenceReader
 
-// TODO Args parsing + main app
+case class ApdlConfig(
+                       mainFile: File = new File("."),
+                       outputDirectory: File = new File("./default-apdl-output")
+                     )
+
 object Main extends App {
 
-  val config = ApdlConfig(args)
+  def parse(args: Array[String]): ApdlConfig = {
 
-  val src = scala.io.Source.fromFile(new File(config.filepath)) mkString
-  val parser = new ApdlParser
+    val argsParser = new scopt.OptionParser[ApdlConfig]("apdl") {
+      // Metadata
+      head("apdl", "1.0")
+
+      // Argument
+      arg[File]("<file>")
+        .action((f, c) => c.copy(mainFile = f))
+
+      opt[File]('d', "dir")
+        .action((o, c) => c.copy(outputDirectory = o))
+        .text("Output directory")
+    }
+
+    argsParser.parse(args, ApdlConfig()) match {
+      case Some(value) => value
+      case None =>
+        println("Unable to parse args".red)
+        System.exit(0)
+        throw new Exception("Unreachable code")
+    }
+  }
+}
+
+object DefineTry extends App {
+  val file = "./src/main/resources/apdl_component.apdl"
+  val componentFile = new File(file)
+  val source = Source.fromFile(componentFile).mkString
+  val parser = new DefineParsers
 
   import parser._
 
-  // TODO optimize result, verification, semantic analysis
-
-  val code = parser.parse(parser.program, new PackratReader[Char](new CharSequenceReader(src)))
-  code match {
-    case Success(result, _) =>
-      // TODO specify generator
-      val generatedCode = (new ArduinoGenerator).generate(result)
-      config.outputFile match {
-        case Some(value) =>
-          val outputFile = new File(value)
-          val pw = new PrintWriter(outputFile)
-          pw.write(generatedCode)
-          pw.flush()
-          pw.close()
-        case None =>
-          println(generatedCode)
-      }
-    case error: NoSuccess => println(s"error... : $error")
-  }
-
-}
-
-case class ApdlConfig(filepath: String, target: ApdlTarget, outputFile: Option[String])
-
-object ApdlConfig {
-
-  def specifyOption(optionName: String, nbArg: Int, args: Array[String], errorMissingMsg: String): List[String] = {
-    if (!args.contains(s"-$optionName")) throw new ApdlArgsException(errorMissingMsg)
-    val index = args.indexOf(s"-$optionName")
-    for (i <- 1 to nbArg) {
-      if (args(index + i).beginWith("-"))
-        throw new ApdlArgsException(s"command arg #$i specified after -$optionName is incorrect")
-    }
-    args.slice(index + 1, index + nbArg + 1).toList
-  }
-
-  def specifyOptionalOption(optionName: String, nbArg: Int, args: Array[String]): Option[List[String]] = {
-    if (!args.contains(s"-$optionName")) None
-    else {
-      val index = args.indexOf(s"-$optionName")
-      for (i <- 1 to nbArg) {
-        if (args(index + i).beginWith("-"))
-          throw new ApdlArgsException(s"command arg #$i specified after -$optionName is incorrect")
-      }
-      Some(args.slice(index + 1, index + nbArg + 1).toList)
-    }
-  }
-
-  def apply(args: Array[String]): ApdlConfig = {
-    if (args.length == 0) throw new ApdlArgsException("Empty arg list")
-    // filepath : option -f
-    val filepath = specifyOption("f", 1, args, "No input file specified, use -f [filepath]").headOption match {
-      case Some(value) => value
-      case None => throw new RuntimeException("filepath not specified")
-    }
-    val target = ApdlTarget.arg2target(specifyOption("t", 1, args, "no target specified, use -t [target]").head)
-    val outputFile = specifyOptionalOption("o", 1, args) match {
-      case Some(value) => Some(value.head)
-      case None => None
-    }
-    ApdlConfig(filepath, target, outputFile)
-  }
-  implicit class ApdlArgs(str: String) {
-    def beginWith(prefix: String): Boolean = str.reverse.endsWith(prefix.reverse)
+  parser.parse(parser.defines, new PackratReader[Char](new CharSequenceReader(source))) match {
+    case Success(result, next) =>
+      println(next.atEnd)
+      result.foreach(println)
+    case n: NoSuccess => println(s"error : $n".red)
   }
 }
