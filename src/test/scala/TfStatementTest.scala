@@ -1,6 +1,7 @@
 import apdl.ApdlParserException
 import apdl.parser._
 import org.scalatest.FlatSpec
+import com.github.SnipyJulmy.scalacolor.ScalaColor._
 
 import scala.util.parsing.input.CharSequenceReader
 
@@ -13,9 +14,9 @@ class TfStatementTest extends FlatSpec {
   def assertAst(code: String, expected: Statement): Unit = {
     val result = parser.parse(tfStatement, new PackratReader(new CharSequenceReader(code))) match {
       case Success(r, _) => r
-      case _: NoSuccess =>
-        //noinspection NameBooleanParameters
-        assert(false)
+      case error: NoSuccess =>
+        println(s"can't parse $b -> $error".red)
+        fail()
     }
 
     s"$code" should s"produce $expected" in {
@@ -38,6 +39,8 @@ class TfStatementTest extends FlatSpec {
 
   assertAst("while(i > 0) i = i - 1", While(Greater(i, zero), ExpressionStatement(VarAssignement(i, Sub(i, 1)))))
   assertAst("while(i > 0 && j < 10) n = n * 2 + 1", While(And(Greater(i, zero), Smaller(j, ten)), ExpressionStatement(VarAssignement(n, Add(Mul(n, 2), 1)))))
+  assertAst("while((true))i = i + 1",While(True(),ExpressionStatement(VarAssignement(i,Add(i,1)))))
+  assertAst("while(((((((true)))))))i = i + 1",While(True(),ExpressionStatement(VarAssignement(i,Add(i,1)))))
   assertAst("do i = i + 1 while(true)", DoWhile(True(), ExpressionStatement(VarAssignement(i, Add(i, 1)))))
   assertAst(
     "if(a == b) print(a) else print(b)",
@@ -47,6 +50,7 @@ class TfStatementTest extends FlatSpec {
       ExpressionStatement(FunctionCall("print", List(b)))
     )
   )
+  assertAst("if(true) return (-8.716613540504124E307 > false)",IfThen(True(),Return(Greater(Literal("-8.716613540504124E307"),False()))))
 
   assertAst("while((int)3.4){(double)4 break}",
     While(
@@ -76,7 +80,16 @@ class TfStatementTest extends FlatSpec {
   assertAst("while(true)if(i > 10) break", While(True(), IfThen(Greater(Symbol("i"), Literal("10")), Break())))
   assertAst("while(true)if(i > 10) continue", While(True(), IfThen(Greater(Symbol("i"), Literal("10")), Continue())))
   assertAst("break", Break())
+  assertAst("{continue break (true >= false) continue (!true) break}",Block(List(
+    Continue(),
+    Break(),
+    ExpressionStatement(GreaterEquals(True(),False())),
+    Continue(),
+    ExpressionStatement(Not(True())),
+    Break()
+  )))
   assertAst("continue", Continue())
+  assertAst("{{break i = i + 1}}", Block(List(Block(List(Break(), ExpressionStatement(VarAssignement(Symbol("i"), Add(Symbol("i"), Literal("1")))))))))
   assertAst("{break i = i + 1}", Block(List(Break(), ExpressionStatement(VarAssignement(Symbol("i"), Add(Symbol("i"), Literal("1")))))))
   assertAst("{i = i + 1 * 2 - 3 continue break i = i + 1}", Block(List(
     ExpressionStatement(VarAssignement(Symbol("i"), Sub(Add(Symbol("i"), Mul(Literal("1"), Literal("2"))), Literal("3")))),

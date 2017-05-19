@@ -184,6 +184,8 @@ class TfExpressionTest extends FlatSpec {
     ArrayAccess(ArrayAccess(Symbol("a"),Literal("1")),Literal("2")),
     ArrayAccess(ArrayAccess(Symbol("a"),Literal("2")),Literal("1"))
   ))
+  assertAst("(((1)))",Literal("1"))
+  assertAst("9.09672290230536E306",Literal("9.09672290230536E306"))
 
   /* Cast expr */
   assertAst("(int)3.2", Cast(TfInt(), Literal("3.2")))

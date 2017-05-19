@@ -28,7 +28,9 @@ trait TransformDslParser extends RegexParsers with PackratParsers {
 
   // Expressions
 
-  lazy val tfConstantExpr: PackratParser[Expr] = tfLogicalOrExpr
+  lazy val tfConstantExpr: PackratParser[Expr] = {
+    tfLogicalOrExpr
+  }
 
   lazy val tfLogicalOrExpr: PackratParser[Expr] = {
     tfLogicalOrExpr ~ ("||" ~> tfLogicalAndExpr) ^^ { case (l ~ r) => Or(l, r) } |
@@ -78,7 +80,7 @@ trait TransformDslParser extends RegexParsers with PackratParsers {
   }
 
   lazy val tfPrimaryExpr: PackratParser[Expr] = {
-    tfAtom | tfSymbol | tfLiteral | lp ~> tfExpr <~ rp
+    lp ~> tfExpr <~ rp | tfAtom | tfSymbol | tfLiteral
   }
 
   lazy val tfArrayAccess: PackratParser[Expr] = {
@@ -106,7 +108,7 @@ trait TransformDslParser extends RegexParsers with PackratParsers {
   }
 
   lazy val tfLiteral: PackratParser[Literal] = {
-    """[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+)""".r ^^ Literal
+    """[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+)(E[0-9]+)?""".r ^^ Literal
   }
 
   lazy val identifier: PackratParser[String] = "[a-zA-Z_][a-zA-Z0-9_]*".r ^^ { str => str }
@@ -211,7 +213,7 @@ trait TransformDslParser extends RegexParsers with PackratParsers {
     tfBreak | tfContinue | tfReturn
   }
 
-  lazy val tfReturn: PackratParser[Return] = "return" ~> tfConstantExpr ^^ { expr => Return(expr) }
+  lazy val tfReturn: PackratParser[Return] = "return" ~> tfExpr ^^ { expr => Return(expr) }
   lazy val tfBreak: PackratParser[Break] = "break" ^^ { _ => Break() }
   lazy val tfContinue: PackratParser[Continue] = "continue" ^^ { _ => Continue() }
 

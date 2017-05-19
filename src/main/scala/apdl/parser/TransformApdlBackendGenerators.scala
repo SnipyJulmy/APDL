@@ -1,6 +1,6 @@
 package apdl.parser
 
-object TransformApdlBackendGenerators {
+trait TransformApdlBackendGenerators {
 
   def toApdlCode(tfTyp: TfRetTyp): String = tfTyp match {
     case TfFloat() => "float"
@@ -45,7 +45,7 @@ object TransformApdlBackendGenerators {
     case DoWhile(cond, stat) => s"do ${toApdlCode(stat)} while(${toApdlCode(cond)})"
     case IfThenElse(cond, trueBranch, falseBranch) => s"if(${toApdlCode(cond)}) ${toApdlCode(trueBranch)} else ${toApdlCode(falseBranch)}"
     case IfThen(cond, ifTrue) => s"if(${toApdlCode(cond)}) ${toApdlCode(ifTrue)}"
-    case Return(expr) => s"return"
+    case Return(expr) => s"return ${toApdlCode(expr)}"
     case Break() => s"break"
     case Continue() => s"continue"
     case Block(statements) =>
@@ -58,9 +58,8 @@ object TransformApdlBackendGenerators {
     case decl: Declaration => decl match {
       case FunctionDecl(FunctionHeader(resultType, identifier, parameters), FunctionBody(body)) =>
         s"""
-           | def $identifier (${parameters map toApdlCode mkString ","}) {
+           | def $identifier (${parameters map toApdlCode mkString ","}) -> ${toApdlCode(resultType)}
            |  ${toApdlCode(body)}
-           | }
         """.stripMargin
       case NewVal(symbol, typ, init) => s"val ${toApdlCode(symbol)} : ${toApdlCode(typ)} = ${toApdlCode(init)}"
       case NewVar(symbol, typ, init) => s"val ${toApdlCode(symbol)} : ${toApdlCode(typ)}" + s"${
@@ -69,12 +68,12 @@ object TransformApdlBackendGenerators {
           case None => ""
         }
       }"
+      case NewArray(symbol, typ, init) => s"${toApdlCode(symbol)} ${toApdlCode(typ)} = ${toApdlCode(init)}"
     }
-    case NewArray(symbol, typ, init) => s"${toApdlCode(symbol)} ${toApdlCode(typ)} = ${toApdlCode(init)}"
   }
   def toApdlCode(typedIdentifier: TypedIdentifier): String = s"${typedIdentifier.name}:${toApdlCode(typedIdentifier.typ)}"
 
-  def toApdlCode(init: ArrayInit) : String = init match {
+  def toApdlCode(init: ArrayInit): String = init match {
     case ArrayInitValue(values) => s"{${values map toApdlCode mkString ","}}"
     case ArrayInitCapacity(capacity) => s"[${toApdlCode(capacity)}]"
   }

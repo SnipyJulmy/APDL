@@ -6,7 +6,7 @@ import apdl.parser.ApdlType.{Id, Num, Str}
   * An code generators which target the apdl language itself
   * Primarly use for test and try
   */
-object DslApdlBackendGenerators {
+trait DslApdlBackendGenerators extends TransformApdlBackendGenerators {
 
   def toApdlCode(define: Define): String = define match {
     case DefineInput(name, parameters, gens) =>
@@ -22,6 +22,10 @@ object DslApdlBackendGenerators {
          |  @out ${toApdlCode(outputType)}
          |  ${gens map toApdlCode mkString "\n"}
          |}
+       """.stripMargin
+    case DefineTransform(functionDecl) =>
+      s"""
+         |@define transform ${toApdlCode(functionDecl)}
        """.stripMargin
   }
 
@@ -56,5 +60,5 @@ object DslApdlBackendGenerators {
     """.stripMargin
   } mkString "\n"
 
-  def toApdlCode(parameters : Seq[Parameter]) : String = parameters.map(toApdlCode).mkString(" ")
+  def toApdlCode(parameters: Seq[Parameter]): String = parameters.map(toApdlCode).mkString(" ")
 }
