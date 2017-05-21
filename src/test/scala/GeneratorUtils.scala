@@ -380,23 +380,23 @@ class ApdlDefineGenerator(maxExprSize: Int = 4, maxBlockSize: Int = 10) extends 
 
   def outGen: Gen[ApdlType] = typGen
 
-  def defineComponentGen: Gen[DefineComponent] = for {
+  def defineComponentGen: Gen[ApdlDefineComponent] = for {
     id <- Gen.identifier
     params <- Gen.listOf(parameterGen)
     in <- inGen
     out <- outGen
     gens <- genGens
-  } yield DefineComponent(id, params, in, out, gens)
+  } yield ApdlDefineComponent(id, params, in, out, gens)
 
-  def defineInputGen: Gen[DefineInput] = for {
+  def defineInputGen: Gen[ApdlDefineInput] = for {
     id <- Gen.identifier
     params <- Gen.listOf(parameterGen)
     gens <- genGens suchThat (m => m.nonEmpty)
-  } yield DefineInput(id, params, gens)
+  } yield ApdlDefineInput(id, params, gens)
 
-  def defineTransformGen: Gen[DefineTransform] = for {
+  def defineTransformGen: Gen[ApdlDefineTransform] = for {
     funcDecl <- genFunctionDecl
-  } yield DefineTransform(funcDecl)
+  } yield ApdlDefineTransform(funcDecl)
 
   /* APDL Transform DSL case class Generator */
 }
