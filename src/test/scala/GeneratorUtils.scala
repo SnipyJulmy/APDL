@@ -60,54 +60,85 @@ object StringGenerators {
      """.stripMargin).label("Define input generator")
 }
 
-class ApdlTestGenerators(exprMaxSize: Int, statementMaxSize: Int) {
+class ApdlBaseGenerators(maxIdentifierSize: Int = 10) {
 
-  def idGen: Gen[String] = Gen.identifier
+  def genPrimitivesTyp: Gen[TfPrimitivesTyp] = Gen.oneOf(
+    genTfBoolean, genTfInt, genTfLong, genTfByte,
+    genTfShort, genTfChar, genTfDouble, genTfFloat
+  )
+
+  def genLiteral: Gen[Literal] = for {
+    num <- Gen.choose(0, Double.MaxValue)
+  } yield Literal(num.toString)
+
+  def genSymbol: Gen[Symbol] = for {
+    id <- genIdentifier
+  } yield Symbol(id)
+
+  def genIdentifier: Gen[String] = for {
+    l <- Gen.choose(1, maxIdentifierSize)
+    c <- Gen.alphaLowerChar
+    cs <- Gen.listOfN(l, Gen.alphaNumChar)
+  } yield (c :: cs).mkString
 
   def typGen: Gen[ApdlType] = Gen.oneOf(ApdlType.values)
 
   def parameterGen: Gen[Parameter] = for {
-    id <- idGen
+    id <- genIdentifier
     typ <- typGen
   } yield Parameter(id, typ)
 
-  def genGen: Gen[apdl.parser.Gen] = for {
-    g <- Gen.alphaNumStr
-    s <- Gen.alphaNumStr
-    l <- Gen.alphaNumStr
-    e <- Gen.alphaNumStr
-  } yield apdl.parser.Gen(g, s, l, e)
-
-  def genGens: Gen[Map[String, apdl.parser.Gen]] = for {
-    id <- Gen.listOf(Gen.identifier)
-    gen <- Gen.listOf(genGen)
-  } yield (id zip gen).toMap
-
-  def inGen: Gen[List[Parameter]] = Gen.listOf(parameterGen).suchThat(_.nonEmpty)
-
-  def outGen: Gen[ApdlType] = typGen
-
-  def defineComponentGen: Gen[DefineComponent] = for {
+  def genTypedIdentifier: Gen[TypedIdentifier] = for {
     id <- Gen.identifier
-    params <- Gen.listOf(parameterGen)
-    in <- inGen
-    out <- outGen
-    gens <- genGens
-  } yield DefineComponent(id, params, in, out, gens)
+    typ <- genTyp
+  } yield TypedIdentifier(id, typ)
 
-  def defineInputGen: Gen[DefineInput] = for {
-    id <- Gen.identifier
-    params <- Gen.listOf(parameterGen)
-    gens <- genGens suchThat (m => m.nonEmpty)
-  } yield DefineInput(id, params, gens)
+  def genTyp: Gen[TfTyp] = Gen.lzy(
+    Gen.oneOf(
+      genTfBoolean, genTfInt, genTfLong, genTfByte,
+      genTfShort, genTfChar, genTfDouble, genTfFloat, genTfArray
+    )
+  )
 
-  def defineTransformGen(depth: Int): Gen[DefineTransform] = for {
-    funcDecl <- genFunctionDecl(depth)
-  } yield DefineTransform(funcDecl)
+  def genRetTyp: Gen[TfRetTyp] = Gen.lzy(
+    Gen.oneOf(
+      genTfBoolean, genTfInt, genTfLong, genTfByte, genTfVoid,
+      genTfShort, genTfChar, genTfDouble, genTfFloat, genTfArray
+    )
+  )
 
-  /* APDL Transform DSL case class Generator */
+  def genTfBoolean: Gen[TfBoolean.type] = TfBoolean
+  def genTfInt: Gen[TfInt.type] = TfInt
+  def genTfLong: Gen[TfLong.type] = TfLong
+  def genTfByte: Gen[TfByte.type] = TfByte
+  def genTfShort: Gen[TfShort.type] = TfShort
+  def genTfChar: Gen[TfChar.type] = TfChar
+  def genTfDouble: Gen[TfDouble.type] = TfDouble
+  def genTfFloat: Gen[TfFloat.type] = TfFloat
+  def genTfVoid: Gen[TfVoid.type] = TfVoid
 
-  def genExpr(size: Int = exprMaxSize): Gen[Expr] = genExprInner(size)
+  def genTfArray: Gen[TfArray] = for {
+    typ <- genTyp
+  } yield TfArray(typ)
+
+  def isValid(l: List[Statement]): Boolean = {
+    if (l.length < 2) true
+    else {
+      val l1 = l.reverse.tail.reverse // drop last
+      val l2 = l.tail // drop first
+      val crtWithNext = l1 zip l2
+      crtWithNext.forall {
+        case (Return(_), ExpressionStatement(_)) => false
+        case (ExpressionStatement(_), ExpressionStatement(Cast(_, _))) => false
+        case _ => true
+      }
+    }
+  }
+}
+
+class ApdlExprGenerators(maxSize: Int = 10) extends ApdlBaseGenerators {
+
+  def genExpr: Gen[Expr] = genExprInner(maxSize)
 
   private def genExprInner(depth: Int): Gen[Expr] = {
     if (depth == 0) genExprTerminal
@@ -167,16 +198,8 @@ class ApdlTestGenerators(exprMaxSize: Int, statementMaxSize: Int) {
     expr <- genExprInner(depth)
   } yield Cast(typ, expr)
 
-  def genLiteral: Gen[Literal] = Gen.lzy(for {
-    num <- Gen.choose(Double.MinValue, Double.MaxValue)
-  } yield Literal(num.toString))
-
-  def genSymbol: Gen[Symbol] = Gen.lzy(for {
-    id <- Gen.identifier
-  } yield Symbol(id))
-
   def genFunctionCall(depth: Int): Gen[FunctionCall] = for {
-    id <- Gen.identifier
+    id <- genIdentifier
     args <- Gen.listOf(genExprInner(depth))
   } yield FunctionCall(id, args)
 
@@ -232,109 +255,65 @@ class ApdlTestGenerators(exprMaxSize: Int, statementMaxSize: Int) {
     e1 <- genExprInner(depth)
     e2 <- genExprInner(depth)
   } yield NotEquals(e1, e2)
+}
 
-  def genPrimitivesTyp: Gen[TfPrimitivesTyp] = Gen.lzy(
-    Gen.oneOf(
-      genTfBoolean, genTfInt, genTfLong, genTfByte,
-      genTfShort, genTfChar, genTfDouble, genTfFloat
-    )
+class ApdlStatementGenerators(maxExprSize: Int = 10, maxBlockSize: Int = 10) extends ApdlExprGenerators(maxExprSize) {
+
+  def genStatement: Gen[Statement] = Gen.oneOf(
+    genWhile,
+    genDoWhile,
+    genIfThen,
+    genExpressionStatement,
+    genBreak,
+    genContinue,
+    genReturn
   )
 
-  def genTyp: Gen[TfTyp] = Gen.lzy(
-    Gen.oneOf(
-      genTfBoolean, genTfInt, genTfLong, genTfByte,
-      genTfShort, genTfChar, genTfDouble, genTfFloat, genTfArray
-    )
-  )
+  def genBlock: Gen[Block] = for {
+    size <- Gen.choose(1, maxBlockSize)
+    statements <- Gen.listOfN(size, genStatement) suchThat (l => isValid(l))
+  } yield Block(statements)
 
-  def genRetTyp: Gen[TfRetTyp] = Gen.lzy(
-    Gen.oneOf(
-      genTfBoolean, genTfInt, genTfLong, genTfByte, genTfVoid,
-      genTfShort, genTfChar, genTfDouble, genTfFloat, genTfArray
-    )
-  )
+  def genExpressionStatement: Gen[ExpressionStatement] = for {
+    expr <- genExpr
+  } yield ExpressionStatement(expr)
 
-  def genTfBoolean: Gen[TfBoolean] = TfBoolean()
-  def genTfInt: Gen[TfInt] = TfInt()
-  def genTfLong: Gen[TfLong] = TfLong()
-  def genTfByte: Gen[TfByte] = TfByte()
-  def genTfShort: Gen[TfShort] = TfShort()
-  def genTfChar: Gen[TfChar] = TfChar()
-  def genTfDouble: Gen[TfDouble] = TfDouble()
-  def genTfFloat: Gen[TfFloat] = TfFloat()
-  def genTfVoid: Gen[TfVoid] = TfVoid()
-
-  def genTfArray: Gen[TfArray] = for {
-    typ <- genTyp
-  } yield TfArray(typ)
-
-  def genTypedIdentifier: Gen[TypedIdentifier] = for {
-    id <- Gen.identifier
-    typ <- genTyp
-  } yield TypedIdentifier(id, typ)
-
-  def genStatement(maxSize: Int = statementMaxSize): Gen[Statement] = {
-    val size = Gen.choose(0, maxSize).sample.getOrElse(maxSize)
-    genStatementInner(size)
-  }
-
-  private def genStatementInner(depth: Int): Gen[Statement] = {
-    if (depth == 0) genStatementTerminal
-    else
-      Gen.oneOf(
-        genWhile(depth - 1), genDoWhile(depth - 1), genIfThen(depth - 1), genBlock(depth - 1),
-        genExpressionStatement, genBreak, genContinue, genReturn
-      )
-  }
-
-  def genStatementTerminal: Gen[Statement] = Gen.oneOf(
-    genBreak, genContinue, genExpressionStatement, genReturn
-  )
-
-  def genWhile(depth: Int): Gen[While] = for {
-    cond <- genExpr()
-    statement <- genStatementInner(depth)
+  def genWhile: Gen[While] = for {
+    cond <- genExpr
+    statement <- Gen.oneOf(genStatement, genBlock)
   } yield While(cond, statement)
 
-  def genDoWhile(depth: Int): Gen[DoWhile] = for {
-    cond <- genExpr(depth)
-    statement <- genStatement(depth)
+  def genDoWhile: Gen[DoWhile] = for {
+    cond <- genExpr
+    statement <- Gen.oneOf(genStatement, genBlock)
   } yield DoWhile(cond, statement)
 
-  def genIfThenElse(depth: Int): Gen[IfThenElse] = for {
-    cond <- genExpr(depth)
-    trueStatement <- genStatement(depth)
-    falseStatement <- genStatement(depth)
+  def genIfThenElse: Gen[IfThenElse] = for {
+    cond <- genExpr
+    trueStatement <- Gen.oneOf(genStatement, genBlock)
+    falseStatement <- Gen.oneOf(genStatement, genBlock)
   } yield IfThenElse(cond, trueStatement, falseStatement)
 
-  def genIfThen(depth: Int): Gen[IfThen] = for {
-    cond <- genExpr(depth)
-    statement <- genStatement(depth)
+  def genIfThen: Gen[IfThen] = for {
+    cond <- genExpr
+    statement <- Gen.oneOf(genStatement, genBlock)
   } yield IfThen(cond, statement)
 
   def genReturn: Gen[Return] = for {
-    expr <- genExpr()
+    expr <- genExpr
   } yield Return(expr)
 
   def genBreak: Gen[Break] = Break()
   def genContinue: Gen[Continue] = Continue()
 
-  def genBlock(depth: Int): Gen[Block] = for {
-    statements <- Gen.listOf(genStatement(depth))
-  } yield Block(statements)
-
-  def genExpressionStatement: Gen[ExpressionStatement] = for {
-    expr <- genExpr()
-  } yield ExpressionStatement(expr)
-
   def genVarAssignement(depth: Int): Gen[VarAssignement] = for {
-    target <- genExpr(depth)
-    value <- genExpr(depth)
+    target <- genExpr
+    value <- genExpr
   } yield VarAssignement(target, value)
 
-  def genFunctionDecl(depth: Int): Gen[FunctionDecl] = for {
+  def genFunctionDecl: Gen[FunctionDecl] = for {
     header <- genFunctionHeader
-    body <- genFunctionBody(depth)
+    body <- genFunctionBody
   } yield FunctionDecl(header, body)
 
   def genFunctionHeader: Gen[FunctionHeader] = for {
@@ -343,17 +322,17 @@ class ApdlTestGenerators(exprMaxSize: Int, statementMaxSize: Int) {
     parameters <- Gen.listOf(genTypedIdentifier)
   } yield FunctionHeader(retTyp, id, parameters)
 
-  def genFunctionBody(depth: Int): Gen[FunctionBody] = for {
-    block <- genBlock(depth)
+  def genFunctionBody: Gen[FunctionBody] = for {
+    block <- genBlock
   } yield FunctionBody(block)
 
   def genNewVal(depth: Int): Gen[NewVal] = for {
     symbol <- genSymbol
     typ <- genTyp
-    init <- genExpr(depth)
+    init <- genExpr
   } yield NewVal(symbol, typ, init)
 
-  def genNewVar(depth: Int): Gen[NewVar] = Gen.lzy(Gen.oneOf(genNewVarNone, genNewVarSome(depth)))
+  def genNewVar(depth: Int): Gen[NewVar] = Gen.oneOf(genNewVarNone, genNewVarSome(depth))
 
   def genNewVarNone: Gen[NewVar] = for {
     symbol <- genSymbol
@@ -363,7 +342,7 @@ class ApdlTestGenerators(exprMaxSize: Int, statementMaxSize: Int) {
   def genNewVarSome(depth: Int): Gen[NewVar] = for {
     symbol <- genSymbol
     typ <- genTyp
-    init <- genExpr(depth)
+    init <- genExpr
   } yield NewVar(symbol, typ, Some(init))
 
   def genNewArray(depth: Int): Gen[NewArray] = for {
@@ -372,10 +351,10 @@ class ApdlTestGenerators(exprMaxSize: Int, statementMaxSize: Int) {
     init <- genArrayInitValue(depth)
   } yield NewArray(symbol, typ, init)
 
-  def genArrayInit(depth: Int): Gen[ArrayInit] = Gen.lzy(Gen.oneOf(genArrayInitValue(depth), genArrayInitCapacity))
+  def genArrayInit(depth: Int): Gen[ArrayInit] = Gen.oneOf(genArrayInitValue(depth), genArrayInitCapacity)
 
   def genArrayInitValue(depth: Int): Gen[ArrayInitValue] = for {
-    values <- Gen.listOf(genExpr(depth))
+    values <- Gen.listOf(genExpr)
   } yield ArrayInitValue(values)
 
   def genArrayInitCapacity: Gen[ArrayInitCapacity] = for {
@@ -383,9 +362,41 @@ class ApdlTestGenerators(exprMaxSize: Int, statementMaxSize: Int) {
   } yield ArrayInitCapacity(cap)
 }
 
-object Test extends App {
-  val gen = new ApdlTestGenerators(1, 1)
-  (0 to 10).foreach(_ => println(gen.genExpr().sample))
-  println()
-  (0 to 10).foreach(_ => println(gen.genStatement().sample))
+class ApdlDefineGenerator(maxExprSize: Int = 10, maxBlockSize: Int = 10) extends ApdlStatementGenerators(maxExprSize, maxBlockSize) {
+
+  def genGen: Gen[apdl.parser.Gen] = for {
+    g <- Gen.alphaNumStr
+    s <- Gen.alphaNumStr
+    l <- Gen.alphaNumStr
+    e <- Gen.alphaNumStr
+  } yield apdl.parser.Gen(g, s, l, e)
+
+  def genGens: Gen[Map[String, apdl.parser.Gen]] = for {
+    id <- Gen.listOf(Gen.identifier)
+    gen <- Gen.listOf(genGen)
+  } yield (id zip gen).toMap
+
+  def inGen: Gen[List[Parameter]] = Gen.listOf(parameterGen).suchThat(_.nonEmpty)
+
+  def outGen: Gen[ApdlType] = typGen
+
+  def defineComponentGen: Gen[DefineComponent] = for {
+    id <- Gen.identifier
+    params <- Gen.listOf(parameterGen)
+    in <- inGen
+    out <- outGen
+    gens <- genGens
+  } yield DefineComponent(id, params, in, out, gens)
+
+  def defineInputGen: Gen[DefineInput] = for {
+    id <- Gen.identifier
+    params <- Gen.listOf(parameterGen)
+    gens <- genGens suchThat (m => m.nonEmpty)
+  } yield DefineInput(id, params, gens)
+
+  def defineTransformGen: Gen[DefineTransform] = for {
+    funcDecl <- genFunctionDecl
+  } yield DefineTransform(funcDecl)
+
+  /* APDL Transform DSL case class Generator */
 }
