@@ -1,45 +1,11 @@
-import apdl.ApdlParserException
 import apdl.parser._
 import org.scalacheck.Prop._
-import org.scalatest.FlatSpec
-import org.scalatest.prop.Checkers
 
-import scala.util.parsing.input.CharSequenceReader
-
-class DefineTest extends FlatSpec with Checkers {
-
-  val parser = new DefineParsers
-
-  import parser._
-
-  implicit override val generatorDrivenConfig = PropertyCheckConfiguration(
-    minSize = 200,
-    sizeRange = 150
-  )
+class DefineTest extends ApdlFlatSpec {
 
   val apdlCodeGenerator = new DslApdlBackendGenerators {}
 
-  private def parse[A](code: String, astParser: Parser[A]): A = {
-    parser.parse(astParser, new PackratReader[Char](new CharSequenceReader(code))) match {
-      case Success(result, next) =>
-        if (!dropWs(next).atEnd) throw new ApdlParserException(s"Unable to parse completely $code: $next")
-        else result
-      case n: NoSuccess =>
-        if (code != "") throw new ApdlParserException(s"Unable to parse $code: $n")
-        else throw new ApdlParserException(s"Unable to parse '': $n")
-    }
-  }
-
-  private def dropWs(input: parser.Input): parser.Input = {
-    if (input.atEnd)
-      input
-    else {
-      if (parser.ws.pattern.matcher(input.first.toString).matches())
-        dropWs(input.rest)
-      else
-        input
-    }
-  }
+  import parser._
 
   behavior of "DefineParser"
 
@@ -177,4 +143,3 @@ class DefineTest extends FlatSpec with Checkers {
     }
   }
 }
-
