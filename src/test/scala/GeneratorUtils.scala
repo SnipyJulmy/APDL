@@ -60,7 +60,7 @@ object StringGenerators {
      """.stripMargin).label("Define input generator")
 }
 
-class ApdlBaseGenerators(maxIdentifierSize: Int = 10) {
+class ApdlBaseGenerators(maxIdentifierSize: Int = 20) {
 
   def genPrimitivesTyp: Gen[TfPrimitivesTyp] = Gen.oneOf(
     genTfBoolean, genTfInt, genTfLong, genTfByte,
@@ -136,9 +136,9 @@ class ApdlBaseGenerators(maxIdentifierSize: Int = 10) {
   }
 }
 
-class ApdlExprGenerators(maxSize: Int = 10) extends ApdlBaseGenerators {
+class ApdlExprGenerators(maxExprSize: Int = 4) extends ApdlBaseGenerators {
 
-  def genExpr: Gen[Expr] = genExprInner(maxSize)
+  def genExpr: Gen[Expr] = genExprInner(maxExprSize)
 
   private def genExprInner(depth: Int): Gen[Expr] = {
     if (depth == 0) genExprTerminal
@@ -257,7 +257,7 @@ class ApdlExprGenerators(maxSize: Int = 10) extends ApdlBaseGenerators {
   } yield NotEquals(e1, e2)
 }
 
-class ApdlStatementGenerators(maxExprSize: Int = 10, maxBlockSize: Int = 10) extends ApdlExprGenerators(maxExprSize) {
+class ApdlStatementGenerators(maxExprSize: Int = 4, maxBlockSize: Int = 10) extends ApdlExprGenerators(maxExprSize) {
 
   def genStatement: Gen[Statement] = Gen.oneOf(
     genWhile,
@@ -362,7 +362,7 @@ class ApdlStatementGenerators(maxExprSize: Int = 10, maxBlockSize: Int = 10) ext
   } yield ArrayInitCapacity(cap)
 }
 
-class ApdlDefineGenerator(maxExprSize: Int = 10, maxBlockSize: Int = 10) extends ApdlStatementGenerators(maxExprSize, maxBlockSize) {
+class ApdlDefineGenerator(maxExprSize: Int = 4, maxBlockSize: Int = 10) extends ApdlStatementGenerators(maxExprSize, maxBlockSize) {
 
   def genGen: Gen[apdl.parser.Gen] = for {
     g <- Gen.alphaNumStr
