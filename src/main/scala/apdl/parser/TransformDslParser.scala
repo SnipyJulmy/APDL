@@ -3,32 +3,37 @@ package apdl.parser
 import apdl._
 
 import scala.language.postfixOps
+import scala.util.matching.Regex
 import scala.util.parsing.combinator.{PackratParsers, RegexParsers}
 
 /* Transformater script syntax */
 trait TransformDslParser extends RegexParsers with PackratParsers {
+  override protected val whiteSpace: Regex = "[ \t\r\f\n]+".r
+  override def skipWhitespace: Boolean = true
 
   // Types
   lazy val tfRetType: PackratParser[TfRetTyp] = tfVoid | tfTyp
   lazy val tfTyp: PackratParser[TfTyp] = tfArrayTyp | tfPrimitivesTyp
   lazy val tfPrimitivesTyp: PackratParser[TfPrimitivesTyp] = tfBooleanTyp | tfNumericTyp
-  lazy val tfBooleanTyp: PackratParser[TfBoolean] = "bool" ^^ { _ => TfBoolean() }
+  lazy val tfBooleanTyp: PackratParser[TfBoolean.type] = "bool" ^^ { _ => TfBoolean }
   lazy val tfNumericTyp: PackratParser[TfNumericTyp] = tfIntegralTyp | tfFloatingPointTyp
   lazy val tfIntegralTyp: PackratParser[TfIntegralTyp] = tfInt | tfShort | tfLong | tfByte | tfChar
-  lazy val tfInt: PackratParser[TfInt] = "int" ^^ { _ => TfInt() }
-  lazy val tfLong: PackratParser[TfLong] = "long" ^^ { _ => TfLong() }
-  lazy val tfByte: PackratParser[TfByte] = "byte" ^^ { _ => TfByte() }
-  lazy val tfShort: PackratParser[TfShort] = "short" ^^ { _ => TfShort() }
-  lazy val tfChar: PackratParser[TfChar] = "char" ^^ { _ => TfChar() }
+  lazy val tfInt: PackratParser[TfInt.type] = "int" ^^ { _ => TfInt }
+  lazy val tfLong: PackratParser[TfLong.type] = "long" ^^ { _ => TfLong }
+  lazy val tfByte: PackratParser[TfByte.type] = "byte" ^^ { _ => TfByte }
+  lazy val tfShort: PackratParser[TfShort.type] = "short" ^^ { _ => TfShort }
+  lazy val tfChar: PackratParser[TfChar.type] = "char" ^^ { _ => TfChar }
   lazy val tfFloatingPointTyp: PackratParser[TfFloatingPointTyp] = tfFloat | tfDouble
-  lazy val tfFloat: PackratParser[TfFloat] = "float" ^^ { _ => TfFloat() }
-  lazy val tfDouble: PackratParser[TfDouble] = "double" ^^ { _ => TfDouble() }
+  lazy val tfFloat: PackratParser[TfFloat.type] = "float" ^^ { _ => TfFloat }
+  lazy val tfDouble: PackratParser[TfDouble.type] = "double" ^^ { _ => TfDouble }
   lazy val tfArrayTyp: PackratParser[TfArray] = tfTyp <~ "[" ~ "]" ^^ { typ => TfArray(typ) }
-  lazy val tfVoid: PackratParser[TfVoid] = "void" ^^ { _ => TfVoid() }
+  lazy val tfVoid: PackratParser[TfVoid.type] = "void" ^^ { _ => TfVoid }
 
   // Expressions
 
-  lazy val tfConstantExpr: PackratParser[Expr] = tfLogicalOrExpr
+  lazy val tfConstantExpr: PackratParser[Expr] = {
+    tfLogicalOrExpr
+  }
 
   lazy val tfLogicalOrExpr: PackratParser[Expr] = {
     tfLogicalOrExpr ~ ("||" ~> tfLogicalAndExpr) ^^ { case (l ~ r) => Or(l, r) } |
@@ -68,14 +73,15 @@ trait TransformDslParser extends RegexParsers with PackratParsers {
 
   lazy val tfCastExpr: PackratParser[Expr] = {
     (lp ~> tfPrimitivesTyp <~ rp) ~ tfCastExpr ^^ { case (t ~ expr) => Cast(t, expr) } |
-      tfPostfixExpr
+      tfNotExpr
   }
 
-  lazy val tfPostfixExpr: PackratParser[Expr] = {
-    tfFunctionCall |
-      tfArrayAccess |
-      tfPrimaryExpr
+  lazy val tfNotExpr : PackratParser[Expr] = {
+    "!" ~> tfNotExpr ^^ {e => Not(e)} |
+    tfPostfixExpr
   }
+
+  lazy val tfPostfixExpr: PackratParser[Expr] = tfFunctionCall | tfArrayAccess | tfPrimaryExpr
 
   lazy val tfPrimaryExpr: PackratParser[Expr] = {
     tfAtom | tfSymbol | tfLiteral | lp ~> tfExpr <~ rp
@@ -106,7 +112,7 @@ trait TransformDslParser extends RegexParsers with PackratParsers {
   }
 
   lazy val tfLiteral: PackratParser[Literal] = {
-    """[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+)""".r ^^ Literal
+    """[+-]?([0-9]+([.][0-9]*)?|[.][0-9]+)(E[0-9]+)?""".r ^^ Literal
   }
 
   lazy val identifier: PackratParser[String] = "[a-zA-Z_][a-zA-Z0-9_]*".r ^^ { str => str }
@@ -199,8 +205,8 @@ trait TransformDslParser extends RegexParsers with PackratParsers {
     }
   }
 
-  lazy val tfSelectionStatement: PackratParser[Statement] = tf_if_then_else | tfIfThen
-  lazy val tf_if_then_else: PackratParser[IfThenElse] = "if" ~ lp ~ tfExpr ~ rp ~ tfStatement ~ "else" ~ tfStatement ^^ {
+  lazy val tfSelectionStatement: PackratParser[Statement] = tfIfThenElse | tfIfThen
+  lazy val tfIfThenElse: PackratParser[IfThenElse] = "if" ~ lp ~ tfExpr ~ rp ~ tfStatement ~ "else" ~ tfStatement ^^ {
     case (_ ~ _ ~ cond ~ _ ~ trueBranch ~ _ ~ falseBranch) => IfThenElse(cond, trueBranch, falseBranch)
   }
   lazy val tfIfThen: PackratParser[IfThen] = "if" ~ lp ~ tfExpr ~ rp ~ tfStatement ^^ {
@@ -211,7 +217,7 @@ trait TransformDslParser extends RegexParsers with PackratParsers {
     tfBreak | tfContinue | tfReturn
   }
 
-  lazy val tfReturn: PackratParser[Return] = "return" ~> tfConstantExpr ^^ { expr => Return(expr) }
+  lazy val tfReturn: PackratParser[Return] = "return" ~> tfExpr ^^ { expr => Return(expr) }
   lazy val tfBreak: PackratParser[Break] = "break" ^^ { _ => Break() }
   lazy val tfContinue: PackratParser[Continue] = "continue" ^^ { _ => Continue() }
 

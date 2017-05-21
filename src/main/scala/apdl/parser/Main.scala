@@ -51,7 +51,7 @@ object DefineTry extends App {
   parser.parse(parser.defines, new PackratReader[Char](new CharSequenceReader(source))) match {
     case Success(result, next) =>
       println(next.atEnd)
-      result.foreach(println)
+      println(result)
     case n: NoSuccess => println(s"error : $n".red)
   }
 }
