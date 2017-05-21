@@ -46,11 +46,9 @@ object DefineTry extends App {
   val source = Source.fromFile(componentFile).mkString
   val parser = new DefineParsers
 
-  val code = " def fn (ks64i:float[]) -> short {(wxb <= true)sgsnt2xiUXu(true + -3.112279961714391E306)}"
-
   import parser._
 
-  parser.parse(parser.tfFunctionDeclaration, new PackratReader[Char](new CharSequenceReader(code))) match {
+  parser.parse(parser.defines, new PackratReader[Char](new CharSequenceReader(source))) match {
     case Success(result, next) =>
       println(next.atEnd)
       println(result)
