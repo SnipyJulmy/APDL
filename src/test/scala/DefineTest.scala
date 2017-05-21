@@ -87,7 +87,7 @@ class DefineTest extends ApdlFlatSpec {
   }
 
   it should "Parse some correct AST transcoded to code" in {
-    val apdlDefineGenerators = new ApdlDefineGenerator(4,4)
+    val apdlDefineGenerators = new ApdlDefineGenerator(4,6)
     check {
       forAll(apdlDefineGenerators.typGen) { t =>
         val code = apdlCodeGenerator.toApdlCode(t)

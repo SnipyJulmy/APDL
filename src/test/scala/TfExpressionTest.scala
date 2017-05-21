@@ -1,18 +1,12 @@
 import apdl.ApdlParserException
 import apdl.parser._
 import org.scalacheck.Prop.{forAll}
-import org.scalatest.FlatSpec
-import org.scalatest.prop.Checkers
 
 import scala.util.parsing.input.CharSequenceReader
 
-class TfExpressionTest extends FlatSpec with Checkers {
-
-  val parser = new TransformDslParser {}
+class TfExpressionTest extends ApdlFlatSpec {
 
   import parser._
-
-  //def parse[A]
 
   def assertEquivExpr(a: String, b: String): Unit = {
     val resultA = parser.parse(tfExpr, new PackratReader[Char](new CharSequenceReader(a))) match {
@@ -245,24 +239,42 @@ class TfExpressionTest extends FlatSpec with Checkers {
   assertThrowsApdlParserException("a > x = 3")
 
   /* Property based testing for expr */
-  /*
+
   behavior of "The TransformApdlParser parser"
 
   it should "Parse correctly any expr" in {
-    val generator : ApdlExprGenerators = new ApdlDefineGenerator(50)
+    val gen = new ApdlExprGenerators(5)
+    val codeGen: TransformApdlBackendGenerators = new TransformApdlBackendGenerators {}
+
     check {
-      forAll() {}
+      forAll(gen.genExpr) { e =>
+        val code = codeGen.toApdlCode(e)
+        val ast = parse(code,tfExpr)
+        ast == e
+      }
     }
   }
+
   it should "Parse correctly any statement" in {
+    val gen = new ApdlStatementGenerators(3,2)
+    val codeGen: TransformApdlBackendGenerators = new TransformApdlBackendGenerators {}
     check {
-      forAll() {}
+      forAll(gen.genStatement) {s =>
+        val code = codeGen.toApdlCode(s)
+        val ast = parse(code,tfStatement)
+        ast == s
+      }
     }
   }
   it should "Parse correctly any apdlType" in {
+    val gen = new ApdlBaseGenerators()
+    val codeGen: TransformApdlBackendGenerators = new TransformApdlBackendGenerators {}
     check {
-      forAll() {}
+      forAll(gen.genRetTyp) {t =>
+        val code = codeGen.toApdlCode(t)
+        val ast = parse(code,tfRetType)
+        ast == t
+      }
     }
   }
-  */
 }
