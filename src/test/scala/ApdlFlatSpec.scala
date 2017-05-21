@@ -5,7 +5,7 @@ import org.scalatest.prop.Checkers
 
 import scala.util.parsing.input.CharSequenceReader
 
-class ApdlFlatSpec extends FlatSpec with Checkers {
+abstract class ApdlFlatSpec extends FlatSpec with Checkers {
 
   val parser = new DefineParsers
 
@@ -13,7 +13,7 @@ class ApdlFlatSpec extends FlatSpec with Checkers {
 
   implicit override val generatorDrivenConfig = PropertyCheckConfiguration(
     minSize = 200,
-    sizeRange = 150
+    sizeRange = 100
   )
 
   protected def parse[A](code: String, astParser: Parser[A]): A = {
