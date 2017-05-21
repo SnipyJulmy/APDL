@@ -1,13 +1,18 @@
 import apdl.ApdlParserException
 import apdl.parser._
+import org.scalacheck.Prop.{forAll}
 import org.scalatest.FlatSpec
+import org.scalatest.prop.Checkers
 
 import scala.util.parsing.input.CharSequenceReader
 
-class TfExpressionTest extends FlatSpec {
+class TfExpressionTest extends FlatSpec with Checkers {
 
   val parser = new TransformDslParser {}
+
   import parser._
+
+  //def parse[A]
 
   def assertEquivExpr(a: String, b: String): Unit = {
     val resultA = parser.parse(tfExpr, new PackratReader[Char](new CharSequenceReader(a))) match {
@@ -181,21 +186,21 @@ class TfExpressionTest extends FlatSpec {
   assertAst("array[9] = 10", VarAssignement(ArrayAccess(Symbol("array"), Literal("9")), Literal("10")))
   assertAst("array[i] = i", VarAssignement(ArrayAccess(Symbol("array"), Symbol("i")), Symbol("i")))
   assertAst("a[1][2] = a[2][1]", VarAssignement(
-    ArrayAccess(ArrayAccess(Symbol("a"),Literal("1")),Literal("2")),
-    ArrayAccess(ArrayAccess(Symbol("a"),Literal("2")),Literal("1"))
+    ArrayAccess(ArrayAccess(Symbol("a"), Literal("1")), Literal("2")),
+    ArrayAccess(ArrayAccess(Symbol("a"), Literal("2")), Literal("1"))
   ))
-  assertAst("(((1)))",Literal("1"))
-  assertAst("9.09672290230536E306",Literal("9.09672290230536E306"))
+  assertAst("(((1)))", Literal("1"))
+  assertAst("9.09672290230536E306", Literal("9.09672290230536E306"))
 
   /* Cast expr */
-  assertAst("(int)3.2", Cast(TfInt(), Literal("3.2")))
-  assertAst("(float)10", Cast(TfFloat(), Literal("10")))
-  assertAst("(double)100", Cast(TfDouble(), Literal("100")))
-  assertAst("(byte)23", Cast(TfByte(), Literal("23")))
-  assertAst("(short)23", Cast(TfShort(), Literal("23")))
-  assertAst("(long)98", Cast(TfLong(), Literal("98")))
-  assertAst("(bool)3.2", Cast(TfBoolean(), Literal("3.2")))
-  assertAst("(char)84", Cast(TfChar(), Literal("84")))
+  assertAst("(int)3.2", Cast(TfInt, Literal("3.2")))
+  assertAst("(float)10", Cast(TfFloat, Literal("10")))
+  assertAst("(double)100", Cast(TfDouble, Literal("100")))
+  assertAst("(byte)23", Cast(TfByte, Literal("23")))
+  assertAst("(short)23", Cast(TfShort, Literal("23")))
+  assertAst("(long)98", Cast(TfLong, Literal("98")))
+  assertAst("(bool)3.2", Cast(TfBoolean, Literal("3.2")))
+  assertAst("(char)84", Cast(TfChar, Literal("84")))
 
   "(void)32" should "produce an ApdlParserException" in {
     assertThrows[ApdlParserException](parseExpr("(void)32"))
@@ -205,8 +210,8 @@ class TfExpressionTest extends FlatSpec {
     assertThrows[ApdlParserException](parseExpr("(int[])b"))
   }
 
-  assertAst("1 + (float)3",Add(Literal("1"),Cast(TfFloat(),Literal("3"))))
-  assertAst("1 - (float)3",Sub(Literal("1"),Cast(TfFloat(),Literal("3"))))
+  assertAst("1 + (float)3", Add(Literal("1"), Cast(TfFloat, Literal("3"))))
+  assertAst("1 - (float)3", Sub(Literal("1"), Cast(TfFloat, Literal("3"))))
 
   /* Boolean expression AST test */
 
@@ -238,4 +243,26 @@ class TfExpressionTest extends FlatSpec {
 
   /* Wrong expression */
   assertThrowsApdlParserException("a > x = 3")
+
+  /* Property based testing for expr */
+  /*
+  behavior of "The TransformApdlParser parser"
+
+  it should "Parse correctly any expr" in {
+    val generator : ApdlExprGenerators = new ApdlDefineGenerator(50)
+    check {
+      forAll() {}
+    }
+  }
+  it should "Parse correctly any statement" in {
+    check {
+      forAll() {}
+    }
+  }
+  it should "Parse correctly any apdlType" in {
+    check {
+      forAll() {}
+    }
+  }
+  */
 }

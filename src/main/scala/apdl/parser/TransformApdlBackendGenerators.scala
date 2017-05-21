@@ -3,16 +3,16 @@ package apdl.parser
 trait TransformApdlBackendGenerators {
 
   def toApdlCode(tfTyp: TfRetTyp): String = tfTyp match {
-    case TfFloat() => "float"
-    case TfInt() => "int"
-    case TfDouble() => "double"
-    case TfLong() => "long"
-    case TfBoolean() => "bool"
-    case TfChar() => "char"
+    case TfFloat => "float"
+    case TfInt => "int"
+    case TfDouble => "double"
+    case TfLong => "long"
+    case TfBoolean => "bool"
+    case TfChar => "char"
     case TfArray(typ) => s"${toApdlCode(typ)}[]"
-    case TfByte() => "byte"
-    case TfShort() => "short"
-    case TfVoid() => "void"
+    case TfByte => "byte"
+    case TfShort => "short"
+    case TfVoid => "void"
   }
 
   def toApdlCode(expr: Expr): String = expr match {
