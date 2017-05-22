@@ -41,14 +41,14 @@ class MainParsers extends DefineParsers {
   def projectName: Parser[String] = "project_name" ~ "=" ~ "\"" ~> literalString <~ "\"" ^^ { str => str }
   def keyValue: Parser[(String, String)] = identifier ~ "=" ~ identifier ^^ { case (k ~ _ ~ v) => (k, v) }
   def apdlInput: Parser[ApdlInput] = "@input" ~> identifier ~ identifier ~ apdlParameters ^^ {
-    case (name ~ typ ~ params) => ApdlInput(name, typ, None, params)
+    case (name ~ typ ~ params) => ApdlInput(name, typ, params)
   }
 
   def apdlParameters: Parser[List[String]] = rep(apdlParameter)
   def apdlParameter: Parser[String] = "[^ \t\f\n\r{}@]+".r ^^ { str => str }
 
   def apdlSerial: Parser[ApdlSerial] = "@serial" ~> identifier ~ (samplingUpdate | samplingTimer) ^^ {
-    case (ident ~ sampling) => ApdlSerial(ident, None, sampling)
+    case (ident ~ sampling) => ApdlSerial(ident, sampling)
   }
 
   def samplingUpdate: Parser[ApdlSamplingUpdate.type] = "update" ^^ { _ => ApdlSamplingUpdate }
@@ -88,8 +88,8 @@ case class ApdlProject(
                       )
 
 case class ApdlDevice(name: String, id: String, framework: String, inputs: List[ApdlInput], serials: List[ApdlSerial], additionalParameters: Map[String, String])
-case class ApdlInput(identifier: String, defineInputName: String, defineInput: Option[ApdlDefineInput], args: List[String])
-case class ApdlSerial(inputName: String, input: Option[ApdlInput], sampling: ApdlSampling)
+case class ApdlInput(identifier: String, defineInputName: String, args: List[String])
+case class ApdlSerial(inputName: String, sampling: ApdlSampling)
 
 sealed trait ApdlSampling
 case object ApdlSamplingUpdate extends ApdlSampling
@@ -103,4 +103,6 @@ object ApdlTimeUnit {
   case object m extends ApdlTimeUnit
   case object h extends ApdlTimeUnit
   case object d extends ApdlTimeUnit
+
+  def values: Seq[ApdlTimeUnit] = Seq(ns, ms, s, m, h, d)
 }
