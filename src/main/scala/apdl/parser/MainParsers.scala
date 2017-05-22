@@ -2,12 +2,15 @@ package apdl.parser
 
 import apdl.ApdlParserException
 
+import scala.Function.tupled
 import scala.util.matching.Regex
 
 class MainParsers extends DefineParsers {
 
   override protected val whiteSpace: Regex = "[ \t\r\f\n]+".r
+
   override def skipWhitespace: Boolean = true
+
   val ws: Regex = whiteSpace
 
   def program: Parser[ApdlProject] = {
@@ -77,9 +80,9 @@ class MainParsers extends DefineParsers {
       val inputs = xs.filter(_.isInstanceOf[ApdlInput]).map(_.asInstanceOf[ApdlInput])
       val serials = xs.filter(_.isInstanceOf[ApdlSerial]).map(_.asInstanceOf[ApdlSerial])
       val keyValues = xs.filter(_.isInstanceOf[(String, String)]).map(_.asInstanceOf[(String, String)])
-      val framework = keyValues.find(_._1 == "framework").getOrElse(throw new ApdlParserException(s"No framework specify for $ident"))._2
-      val id = keyValues.find(_._1 == "id").getOrElse(throw new ApdlParserException(s"No id specify for $ident"))._2
-      val parameters = keyValues.filter(ss => ss._1 != "id" && ss._1 != "framework").toMap
+      val framework = (keyValues find tupled((k, _) => k == "framework")).getOrElse(throw new ApdlParserException(s"No framework specify for $ident"))._2
+      val id = (keyValues find tupled((k, _) => k == "id")).getOrElse(throw new ApdlParserException(s"No id specify for $ident"))._2
+      val parameters = (keyValues filter tupled((k, _) => k != "id" && k != "framework")).toMap
       ApdlDevice(ident, id, framework, inputs, serials, parameters)
     }
 

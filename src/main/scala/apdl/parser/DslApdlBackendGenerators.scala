@@ -3,6 +3,8 @@ package apdl.parser
 import apdl.parser.ApdlTimeUnit._
 import apdl.parser.ApdlType.{Id, Num, Str}
 
+import Function.tupled
+
 /**
   * An code generators which target the apdl language itself
   * Primarly use for test and try
@@ -32,12 +34,14 @@ trait DslApdlBackendGenerators extends TransformApdlBackendGenerators {
 
   def toApdlCode(parameter: Parameter): String = s"${parameter.id} : ${parameter.typ}"
 
-  def toApdlCode(gen: (String, apdl.parser.Gen)): String =
+  def toApdlCode(gen: (String, apdl.parser.Gen)): String = {
+    val (id, g) = gen
     s"""
-       |@gen ${gen._1} {
-       |  ${toApdlCode(gen._2)}
+       |@gen $id {
+       |  ${toApdlCode(g)}
        |}
      """.stripMargin
+  }
 
   def toApdlCode(outputType: ApdlType): String = outputType match {
     case Num => "num"
@@ -70,7 +74,7 @@ trait DslApdlBackendGenerators extends TransformApdlBackendGenerators {
        |  framework = ${device.framework}
        |  ${device.inputs map toApdlCode mkString "\n"}
        |  ${device.serials map toApdlCode mkString "\n"}
-       |  ${device.additionalParameters map(param => s"${param._1} = ${param._2}") mkString "\n"}
+       |  ${device.additionalParameters map tupled ((k ,v ) => s"$k = $v") mkString "\n"}
        |}
      """.stripMargin
 

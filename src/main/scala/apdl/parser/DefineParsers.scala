@@ -15,7 +15,7 @@ class DefineParsers extends TransformDslParser with RegexParsers with PackratPar
 
   lazy val defineComponent: PackratParser[ApdlDefineComponent] = {
     "component" ~> identifier ~ parameters ~ lb ~ defineComponentBody ~ rb ^^ {
-      case (i ~ params ~ _ ~ body ~ _) => ApdlDefineComponent(i, params, body._1, body._2, body._3)
+      case (i ~ params ~ _ ~ ((in,out,gs)) ~ _) => ApdlDefineComponent(i, params, in, out, gs)
     }
   }
 
