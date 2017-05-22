@@ -242,7 +242,7 @@ class TfExpressionTest extends ApdlFlatSpec {
 
   behavior of "The TransformApdlParser parser"
 
-  it should "Parse correctly any expr" in {
+  it should "correctly parse any expr" in {
     val gen = new ApdlExprGenerators(5)
     val codeGen: TransformApdlBackendGenerators = new TransformApdlBackendGenerators {}
 
@@ -255,7 +255,7 @@ class TfExpressionTest extends ApdlFlatSpec {
     }
   }
 
-  it should "Parse correctly any statement" in {
+  it should "correctly parse any statement" in {
     val gen = new ApdlStatementGenerators(3,2)
     val codeGen: TransformApdlBackendGenerators = new TransformApdlBackendGenerators {}
     check {
@@ -266,7 +266,7 @@ class TfExpressionTest extends ApdlFlatSpec {
       }
     }
   }
-  it should "Parse correctly any apdlType" in {
+  it should "correctly parse any apdlType" in {
     val gen = new ApdlBaseGenerators()
     val codeGen: TransformApdlBackendGenerators = new TransformApdlBackendGenerators {}
     check {
