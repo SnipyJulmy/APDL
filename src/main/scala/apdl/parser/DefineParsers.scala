@@ -9,14 +9,13 @@ class DefineParsers extends TransformDslParser with RegexParsers with PackratPar
 
   override protected val whiteSpace: Regex = "[ \t\r\f\n]+".r
   override def skipWhitespace: Boolean = true
-  val ws: Regex = whiteSpace
 
-  lazy val defines: PackratParser[List[Define]] = rep(define)
-  lazy val define: PackratParser[Define] = "@define" ~> (defineComponent | defineInput | defineTransform)
+  lazy val defines: PackratParser[List[ApdlDefine]] = rep(apdlDefine)
+  lazy val apdlDefine: PackratParser[ApdlDefine] = "@define" ~> (defineComponent | defineInput | defineTransform)
 
-  lazy val defineComponent: PackratParser[DefineComponent] = {
+  lazy val defineComponent: PackratParser[ApdlDefineComponent] = {
     "component" ~> identifier ~ parameters ~ lb ~ defineComponentBody ~ rb ^^ {
-      case (i ~ params ~ _ ~ body ~ _) => DefineComponent(i, params, body._1, body._2, body._3)
+      case (i ~ params ~ _ ~ body ~ _) => ApdlDefineComponent(i, params, body._1, body._2, body._3)
     }
   }
 
@@ -42,8 +41,8 @@ class DefineParsers extends TransformDslParser with RegexParsers with PackratPar
   lazy val expr: PackratParser[String] = "expr" ~ "=" ~ "\"" ~> literalString <~ "\"" ^^ { str => str }
   lazy val literalString: PackratParser[String] = """(\\.|[^\\"])*""".r ^^ { str => str }
 
-  lazy val defineInput: PackratParser[DefineInput] = "input" ~> identifier ~ parameters ~ (lb ~> gens <~ rb) ^^ {
-    case (defId ~ defParams ~ defGens) => DefineInput(defId, defParams, defGens)
+  lazy val defineInput: PackratParser[ApdlDefineInput] = "input" ~> identifier ~ parameters ~ (lb ~> gens <~ rb) ^^ {
+    case (defId ~ defParams ~ defGens) => ApdlDefineInput(defId, defParams, defGens)
   }
 
   lazy val apdlType: PackratParser[ApdlType] = num | str | id
@@ -56,8 +55,8 @@ class DefineParsers extends TransformDslParser with RegexParsers with PackratPar
 
   lazy val number: PackratParser[String] = "[-+]?[0-9]+.?[0-9]*".r ^^ { str => str }
 
-  lazy val defineTransform : PackratParser[DefineTransform] = {
-    "transform" ~> tfFunctionDeclaration ^^ {f => DefineTransform(f)}
+  lazy val defineTransform : PackratParser[ApdlDefineTransform] = {
+    "transform" ~> tfFunctionDeclaration ^^ {f => ApdlDefineTransform(f)}
   }
 }
 
@@ -65,10 +64,10 @@ case class Inputs(parameters: List[Parameter])
 case class Output(outputType: ApdlType)
 case class Gen(global: String, setup: String, loop: String, expr: String)
 
-sealed trait Define
-case class DefineInput(name: String, parameters: List[Parameter], gens: Map[String, Gen]) extends Define
-case class DefineComponent(name: String, parameters: List[Parameter], inputs: List[Parameter], outputType: ApdlType, gens: Map[String, Gen]) extends Define
-case class DefineTransform(functionDecl: FunctionDecl) extends Define
+sealed trait ApdlDefine
+case class ApdlDefineInput(name: String, parameters: List[Parameter], gens: Map[String, Gen]) extends ApdlDefine
+case class ApdlDefineComponent(name: String, parameters: List[Parameter], inputs: List[Parameter], outputType: ApdlType, gens: Map[String, Gen]) extends ApdlDefine
+case class ApdlDefineTransform(functionDecl: FunctionDecl) extends ApdlDefine
 
 case class Parameter(id: String, typ: ApdlType)
 

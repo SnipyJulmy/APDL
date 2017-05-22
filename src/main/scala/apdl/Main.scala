@@ -1,8 +1,8 @@
-package apdl.parser
+package apdl
 
 import java.io.File
 
-import com.github.SnipyJulmy.scalacolor.ScalaColor._
+import apdl.parser.MainParsers
 
 import scala.io.Source
 import scala.language.postfixOps
@@ -14,6 +14,16 @@ case class ApdlConfig(
                      )
 
 object Main extends App {
+
+  val input = "example.apdl"
+  val source = Source.fromFile(input).mkString
+  val manager = new ApdlProjectManager(source)
+
+  val project = manager.project
+
+  println(project)
+
+  /*
 
   def parse(args: Array[String]): ApdlConfig = {
 
@@ -38,20 +48,28 @@ object Main extends App {
         throw new Exception("Unreachable code")
     }
   }
+  */
 }
 
-object DefineTry extends App {
-  val file = "./src/main/resources/apdl_component.apdl"
-  val componentFile = new File(file)
-  val source = Source.fromFile(componentFile).mkString
-  val parser = new DefineParsers
+object Try extends App {
+  val code =
+    """|@device arduino1 {
+       |    id = uno
+       |    framework = arduino
+       |    @input rawTemp analogInput 1
+       |    @input lum analogInput 0
+       |    @input temp tf rawTemp
+       |    @input lumTemp simpleOperator + lum temp
+       |    @serial lum each 1 s
+       |    @serial temp each 1 s
+       |}""".stripMargin
 
-  import parser._
+  val parsers = new MainParsers
 
-  parser.parse(parser.defines, new PackratReader[Char](new CharSequenceReader(source))) match {
-    case Success(result, next) =>
-      println(next.atEnd)
-      println(result)
-    case n: NoSuccess => println(s"error : $n".red)
+  import parsers._
+
+  parsers.parse(parsers.apdlDevice, new PackratReader[Char](new CharSequenceReader(code))) match {
+    case Success(result, next) => println(result)
+    case n: NoSuccess => println(s"$n")
   }
 }

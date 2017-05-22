@@ -12,7 +12,7 @@ class DefineTest extends ApdlFlatSpec {
   it should "Parse some correct defined component" in {
     check {
       forAllNoShrink(StringGenerators.defineComponentGen) { c =>
-        parse(c, define).isInstanceOf[DefineComponent]
+        parse(c, apdlDefine).isInstanceOf[ApdlDefineComponent]
       }
     }
   }
@@ -20,7 +20,7 @@ class DefineTest extends ApdlFlatSpec {
   it should "Parse some correct defined input" in {
     check {
       forAllNoShrink(StringGenerators.defineInputGen) { i =>
-        parse(i, define).isInstanceOf[DefineInput]
+        parse(i, apdlDefine).isInstanceOf[ApdlDefineInput]
       }
     }
   }
@@ -71,9 +71,9 @@ class DefineTest extends ApdlFlatSpec {
 
   //noinspection VariablePatternShadow
   it should s"Produce the correct AST for $t1" in {
-    val ast = parse(t1, define)
+    val ast = parse(t1, apdlDefine)
     ast match {
-      case DefineComponent(name, parameters, inputs, outputType, gens) =>
+      case ApdlDefineComponent(name, parameters, inputs, outputType, gens) =>
         assert(name == "simpleOperator")
         assert(parameters == List(Parameter("op", ApdlType.Str)))
         assert(inputs == List(Parameter("x", ApdlType.Num), Parameter("y", ApdlType.Num)))
@@ -87,14 +87,14 @@ class DefineTest extends ApdlFlatSpec {
   }
 
   it should "Parse some correct AST transcoded to code" in {
-    val apdlDefineGenerators = new ApdlDefineGenerator(3,3)
+    val apdlDefineGenerators = new ApdlDefineGenerators(3,3)
     check {
       forAll(apdlDefineGenerators.typGen) { t =>
         val code = apdlCodeGenerator.toApdlCode(t)
         val ast = parse(code, apdlType)
         ast == t
       }
-      forAll(apdlDefineGenerators.parameterGen) { x =>
+      forAll(apdlDefineGenerators.genParameter) { x =>
         val code = apdlCodeGenerator.toApdlCode(x)
         val ast = parse(code, parameter)
         ast == x
@@ -119,25 +119,25 @@ class DefineTest extends ApdlFlatSpec {
         val ast = parse(code, output)
         ast == x
       }
-      forAll(apdlDefineGenerators.defineComponentGen) { x =>
-        val code = apdlCodeGenerator.toApdlCode(x.asInstanceOf[Define])
-        val ast = parse(code, define)
+      forAll(apdlDefineGenerators.genDefineComponent) { x =>
+        val code = apdlCodeGenerator.toApdlCode(x.asInstanceOf[ApdlDefine])
+        val ast = parse(code, apdlDefine)
         ast match {
-          case component: DefineComponent => component == x
+          case component: ApdlDefineComponent => component == x
           case _ => false
         }
       }
-      forAll(apdlDefineGenerators.defineInputGen) { x =>
-        val code = apdlCodeGenerator.toApdlCode(x.asInstanceOf[Define])
-        val ast = parse(code, define)
+      forAll(apdlDefineGenerators.genDefineInput) { x =>
+        val code = apdlCodeGenerator.toApdlCode(x.asInstanceOf[ApdlDefine])
+        val ast = parse(code, apdlDefine)
         ast match {
-          case input: DefineInput => input == x
+          case input: ApdlDefineInput => input == x
           case _ => false
         }
       }
-      forAll(apdlDefineGenerators.defineTransformGen) { x =>
-        val code = apdlCodeGenerator.toApdlCode(x.asInstanceOf[Define])
-        val ast = parse(code, define)
+      forAll(apdlDefineGenerators.genDefineTransform) { x =>
+        val code = apdlCodeGenerator.toApdlCode(x.asInstanceOf[ApdlDefine])
+        val ast = parse(code, apdlDefine)
         ast == x
       }
     }

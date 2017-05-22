@@ -39,3 +39,11 @@ class ApdlFormatException(s: String) extends ApdlParserException {
     s"$s ${super.toString}"
   }
 }
+
+class ApdlTestException(s: String) extends Throwable {
+  def this() = this("")
+
+  override def toString: String = {
+    s"$s ${super.toString}"
+  }
+}
