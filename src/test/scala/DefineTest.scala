@@ -28,7 +28,8 @@ class DefineTest extends ApdlFlatSpec {
   it should "Parse some correct defined @gen" in {
     check {
       forAllNoShrink(StringGenerators.genGen) { g =>
-        parse(g, gen)._2.isInstanceOf[Gen]
+        val (_,genData) = parse(g, gen)
+        genData.isInstanceOf[Gen]
       }
     }
   }

@@ -76,9 +76,9 @@ trait TransformDslParser extends RegexParsers with PackratParsers {
       tfNotExpr
   }
 
-  lazy val tfNotExpr : PackratParser[Expr] = {
-    "!" ~> tfNotExpr ^^ {e => Not(e)} |
-    tfPostfixExpr
+  lazy val tfNotExpr: PackratParser[Expr] = {
+    "!" ~> tfNotExpr ^^ { e => Not(e) } |
+      tfPostfixExpr
   }
 
   lazy val tfPostfixExpr: PackratParser[Expr] = tfFunctionCall | tfArrayAccess | tfPrimaryExpr
@@ -123,9 +123,9 @@ trait TransformDslParser extends RegexParsers with PackratParsers {
     }
 
   lazy val tfFunctionCallArg: PackratParser[List[Expr]] = {
-    (tfExpr ?) ~ rep("," ~ tfExpr) ^^ { exprs =>
-      exprs._1 match {
-        case Some(value) => value :: exprs._2.map(_._2)
+    (tfExpr ?) ~ rep("," ~> tfExpr) ^^ { case (a ~ as) =>
+      a match {
+        case Some(value) => value :: as
         case None => List()
       }
     }
@@ -194,8 +194,8 @@ trait TransformDslParser extends RegexParsers with PackratParsers {
 
   lazy val tfArrayInit: PackratParser[ArrayInit] = {
     "[" ~> tfLiteral <~ "]" ^^ ArrayInitCapacity |
-      "{" ~> tfExpr ~ rep("," ~> tfExpr) <~ "}" ^^ { es =>
-        ArrayInitValue(es._1 :: es._2)
+      "{" ~> tfExpr ~ rep("," ~> tfExpr) <~ "}" ^^ { case (e ~ es) =>
+        ArrayInitValue(e :: es)
       }
   }
 
