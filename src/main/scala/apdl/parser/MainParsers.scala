@@ -8,6 +8,7 @@ class MainParsers extends DefineParsers {
 
   override protected val whiteSpace: Regex = "[ \t\r\f\n]+".r
   override def skipWhitespace: Boolean = true
+  val ws: Regex = whiteSpace
 
   def program: Parser[ApdlProject] = {
     def process(xs: List[Object]): ApdlProject = {
@@ -32,6 +33,7 @@ class MainParsers extends DefineParsers {
 
       ApdlProject(projectName, devices, defineInputs, defineComponents, defineTransforms)
     }
+
     rep1(projectName | apdlDevice | apdlDefine) ^^ {
       xs =>
         process(xs)
@@ -39,20 +41,26 @@ class MainParsers extends DefineParsers {
   }
 
   def projectName: Parser[String] = "project_name" ~ "=" ~ "\"" ~> literalString <~ "\"" ^^ { str => str }
+
   def keyValue: Parser[(String, String)] = identifier ~ "=" ~ identifier ^^ { case (k ~ _ ~ v) => (k, v) }
+
   def apdlInput: Parser[ApdlInput] = "@input" ~> identifier ~ identifier ~ apdlParameters ^^ {
     case (name ~ typ ~ params) => ApdlInput(name, typ, params)
   }
 
   def apdlParameters: Parser[List[String]] = rep(apdlParameter)
+
   def apdlParameter: Parser[String] = "[^ \t\f\n\r{}@]+".r ^^ { str => str }
 
-  def apdlSerial: Parser[ApdlSerial] = "@serial" ~> identifier ~ (samplingUpdate | samplingTimer) ^^ {
+  def apdlSerial: Parser[ApdlSerial] = "@serial" ~> identifier ~ apdlSampling ^^ {
     case (ident ~ sampling) => ApdlSerial(ident, sampling)
   }
 
-  def samplingUpdate: Parser[ApdlSamplingUpdate.type] = "update" ^^ { _ => ApdlSamplingUpdate }
-  def samplingTimer: Parser[ApdlSamplingTimer] = "each" ~> "[0-9]+".r ~ timeUnit ^^ { case (value ~ tu) => ApdlSamplingTimer(value.toInt, tu) }
+  def apdlSampling: Parser[ApdlSampling] = apdlSamplingUpdate | apdlSamplingTimer
+
+  def apdlSamplingUpdate: Parser[ApdlSamplingUpdate.type] = "update" ^^ { _ => ApdlSamplingUpdate }
+
+  def apdlSamplingTimer: Parser[ApdlSamplingTimer] = "each" ~> "[0-9]+".r ~ timeUnit ^^ { case (value ~ tu) => ApdlSamplingTimer(value.toInt, tu) }
 
   def timeUnit: Parser[ApdlTimeUnit] = {
     "ns" ^^ { _ => ApdlTimeUnit.ns } |

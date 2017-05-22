@@ -9,7 +9,6 @@ class DefineParsers extends TransformDslParser with RegexParsers with PackratPar
 
   override protected val whiteSpace: Regex = "[ \t\r\f\n]+".r
   override def skipWhitespace: Boolean = true
-  val ws: Regex = whiteSpace
 
   lazy val defines: PackratParser[List[ApdlDefine]] = rep(apdlDefine)
   lazy val apdlDefine: PackratParser[ApdlDefine] = "@define" ~> (defineComponent | defineInput | defineTransform)
