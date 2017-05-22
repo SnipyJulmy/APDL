@@ -8,14 +8,14 @@ import apdl.parser.ApdlType.{Id, Num, Str}
   */
 trait DslApdlBackendGenerators extends TransformApdlBackendGenerators {
 
-  def toApdlCode(define: Define): String = define match {
-    case DefineInput(name, parameters, gens) =>
+  def toApdlCode(define: ApdlDefine): String = define match {
+    case ApdlDefineInput(name, parameters, gens) =>
       s"""
          |@define input $name ${parameters map toApdlCode mkString " "} {
          |  ${gens map toApdlCode mkString "\n"}
          |}
        """.stripMargin
-    case DefineComponent(name, parameters, inputs, outputType, gens) =>
+    case ApdlDefineComponent(name, parameters, inputs, outputType, gens) =>
       s"""
          |@define component $name ${parameters map toApdlCode mkString " "} {
          |  @in ${inputs map toApdlCode mkString " "}
@@ -23,7 +23,7 @@ trait DslApdlBackendGenerators extends TransformApdlBackendGenerators {
          |  ${gens map toApdlCode mkString "\n"}
          |}
        """.stripMargin
-    case DefineTransform(functionDecl) =>
+    case ApdlDefineTransform(functionDecl) =>
       s"""
          |@define transform ${toApdlCode(functionDecl)}
        """.stripMargin
