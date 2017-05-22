@@ -1,5 +1,5 @@
 import apdl.ApdlParserException
-import apdl.parser.DefineParsers
+import apdl.parser.{DefineParsers, MainParsers}
 import org.scalatest.FlatSpec
 import org.scalatest.prop.Checkers
 
@@ -7,7 +7,7 @@ import scala.util.parsing.input.CharSequenceReader
 
 abstract class ApdlFlatSpec extends FlatSpec with Checkers {
 
-  val parser = new DefineParsers
+  val parser = new MainParsers
 
   import parser._
 

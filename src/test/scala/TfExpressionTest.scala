@@ -1,6 +1,6 @@
 import apdl.ApdlParserException
 import apdl.parser._
-import org.scalacheck.Prop.{forAll}
+import org.scalacheck.Prop.forAll
 
 import scala.util.parsing.input.CharSequenceReader
 

@@ -94,7 +94,7 @@ class DefineTest extends ApdlFlatSpec {
         val ast = parse(code, apdlType)
         ast == t
       }
-      forAll(apdlDefineGenerators.parameterGen) { x =>
+      forAll(apdlDefineGenerators.genParameter) { x =>
         val code = apdlCodeGenerator.toApdlCode(x)
         val ast = parse(code, parameter)
         ast == x
@@ -119,7 +119,7 @@ class DefineTest extends ApdlFlatSpec {
         val ast = parse(code, output)
         ast == x
       }
-      forAll(apdlDefineGenerators.defineComponentGen) { x =>
+      forAll(apdlDefineGenerators.genDefineComponent) { x =>
         val code = apdlCodeGenerator.toApdlCode(x.asInstanceOf[ApdlDefine])
         val ast = parse(code, apdlDefine)
         ast match {
@@ -127,7 +127,7 @@ class DefineTest extends ApdlFlatSpec {
           case _ => false
         }
       }
-      forAll(apdlDefineGenerators.defineInputGen) { x =>
+      forAll(apdlDefineGenerators.genDefineInput) { x =>
         val code = apdlCodeGenerator.toApdlCode(x.asInstanceOf[ApdlDefine])
         val ast = parse(code, apdlDefine)
         ast match {
@@ -135,7 +135,7 @@ class DefineTest extends ApdlFlatSpec {
           case _ => false
         }
       }
-      forAll(apdlDefineGenerators.defineTransformGen) { x =>
+      forAll(apdlDefineGenerators.genDefineTransform) { x =>
         val code = apdlCodeGenerator.toApdlCode(x.asInstanceOf[ApdlDefine])
         val ast = parse(code, apdlDefine)
         ast == x

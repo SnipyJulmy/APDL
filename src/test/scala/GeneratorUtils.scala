@@ -83,7 +83,7 @@ class ApdlBaseGenerators(maxIdentifierSize: Int = 20) {
 
   def typGen: Gen[ApdlType] = Gen.oneOf(ApdlType.values)
 
-  def parameterGen: Gen[Parameter] = for {
+  def genParameter: Gen[Parameter] = for {
     id <- genIdentifier
     typ <- typGen
   } yield Parameter(id, typ)
@@ -108,13 +108,21 @@ class ApdlBaseGenerators(maxIdentifierSize: Int = 20) {
   )
 
   def genTfBoolean: Gen[TfBoolean.type] = TfBoolean
+
   def genTfInt: Gen[TfInt.type] = TfInt
+
   def genTfLong: Gen[TfLong.type] = TfLong
+
   def genTfByte: Gen[TfByte.type] = TfByte
+
   def genTfShort: Gen[TfShort.type] = TfShort
+
   def genTfChar: Gen[TfChar.type] = TfChar
+
   def genTfDouble: Gen[TfDouble.type] = TfDouble
+
   def genTfFloat: Gen[TfFloat.type] = TfFloat
+
   def genTfVoid: Gen[TfVoid.type] = TfVoid
 
   def genTfArray: Gen[TfArray] = for {
@@ -200,7 +208,7 @@ class ApdlExprGenerators(maxExprSize: Int = 4) extends ApdlBaseGenerators {
 
   def genFunctionCall(depth: Int): Gen[FunctionCall] = for {
     id <- genIdentifier
-    args <- Gen.listOf(genExprInner(depth))
+    args <- Gen.listOfN(maxExprSize,genExprInner(depth))
   } yield FunctionCall(id, args)
 
   def genArrayAccess(depth: Int): Gen[ArrayAccess] = for {
@@ -304,6 +312,7 @@ class ApdlStatementGenerators(maxExprSize: Int = 4, maxBlockSize: Int = 10) exte
   } yield Return(expr)
 
   def genBreak: Gen[Break] = Break()
+
   def genContinue: Gen[Continue] = Continue()
 
   def genVarAssignement(depth: Int): Gen[VarAssignement] = for {
@@ -376,27 +385,76 @@ class ApdlDefineGenerators(maxExprSize: Int = 4, maxBlockSize: Int = 10) extends
     gen <- Gen.listOf(genGen)
   } yield (id zip gen).toMap
 
-  def inGen: Gen[List[Parameter]] = Gen.listOf(parameterGen).suchThat(_.nonEmpty)
+  def inGen: Gen[List[Parameter]] = Gen.listOf(genParameter).suchThat(_.nonEmpty)
 
   def outGen: Gen[ApdlType] = typGen
 
-  def defineComponentGen: Gen[ApdlDefineComponent] = for {
+  def genDefineComponent: Gen[ApdlDefineComponent] = for {
     id <- Gen.identifier
-    params <- Gen.listOf(parameterGen)
+    params <- Gen.listOf(genParameter)
     in <- inGen
     out <- outGen
     gens <- genGens
   } yield ApdlDefineComponent(id, params, in, out, gens)
 
-  def defineInputGen: Gen[ApdlDefineInput] = for {
+  def genDefineInput: Gen[ApdlDefineInput] = for {
     id <- Gen.identifier
-    params <- Gen.listOf(parameterGen)
+    params <- Gen.listOf(genParameter)
     gens <- genGens suchThat (m => m.nonEmpty)
   } yield ApdlDefineInput(id, params, gens)
 
-  def defineTransformGen: Gen[ApdlDefineTransform] = for {
+  def genDefineTransform: Gen[ApdlDefineTransform] = for {
     funcDecl <- genFunctionDecl
   } yield ApdlDefineTransform(funcDecl)
 
   /* APDL Transform DSL case class Generator */
+}
+
+class ApdlProjectGenerators(maxExprSize: Int = 4, maxBlockSize: Int = 10, maxGeneralListSize : Int = 10)
+  extends ApdlDefineGenerators(maxExprSize, maxBlockSize) {
+
+  def genProject: Gen[ApdlProject] = for {
+    l <- Gen.choose(0,maxGeneralListSize)
+    name <- genIdentifier
+    devices <- Gen.listOfN(l,genDevice)
+    defineInputs <- Gen.listOfN(l,genDefineInput)
+    defineComponents <- Gen.listOfN(l,genDefineComponent)
+    defineTransforms <- Gen.listOfN(l,genDefineTransform)
+  } yield ApdlProject(name, devices, defineInputs, defineComponents, defineTransforms)
+
+  def genDevice: Gen[ApdlDevice] = for {
+    l <- Gen.choose(0,maxGeneralListSize)
+    name <- genIdentifier
+    id <- genIdentifier
+    framework <- genIdentifier
+    inputs <- Gen.listOfN(l,genInput)
+    serials <- Gen.listOfN(l,genSerial)
+    params <- Gen.listOfN(l,for {
+      _1 <- genIdentifier
+      _2 <- genIdentifier
+    } yield (_1, _2))
+  } yield ApdlDevice(name, id, framework, inputs, serials, params.toMap)
+
+  def genInput: Gen[ApdlInput] = for {
+    l <- Gen.choose(0,maxGeneralListSize)
+    id <- genIdentifier
+    inputName <- genIdentifier
+    params <- Gen.listOfN(l,genParameter.map(p => p.id))
+  } yield ApdlInput(id, inputName, params)
+
+  def genSerial: Gen[ApdlSerial] = for {
+    name <- genIdentifier
+    sampling <- genSampling
+  } yield ApdlSerial(name, sampling)
+
+  def genSampling: Gen[ApdlSampling] = Gen.oneOf(genSamplingUpdate, genSamplingTimer)
+
+  def genSamplingUpdate: Gen[ApdlSamplingUpdate.type] = ApdlSamplingUpdate
+
+  def genSamplingTimer: Gen[ApdlSamplingTimer] = for {
+    unit <- genTimeUnit
+    value <- Gen.posNum[Int]
+  } yield ApdlSamplingTimer(value, unit)
+
+  def genTimeUnit: Gen[ApdlTimeUnit] = Gen.oneOf(ApdlTimeUnit.values)
 }
