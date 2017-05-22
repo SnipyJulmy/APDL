@@ -362,7 +362,7 @@ class ApdlStatementGenerators(maxExprSize: Int = 4, maxBlockSize: Int = 10) exte
   } yield ArrayInitCapacity(cap)
 }
 
-class ApdlDefineGenerator(maxExprSize: Int = 4, maxBlockSize: Int = 10) extends ApdlStatementGenerators(maxExprSize, maxBlockSize) {
+class ApdlDefineGenerators(maxExprSize: Int = 4, maxBlockSize: Int = 10) extends ApdlStatementGenerators(maxExprSize, maxBlockSize) {
 
   def genGen: Gen[apdl.parser.Gen] = for {
     g <- Gen.alphaNumStr
@@ -399,4 +399,8 @@ class ApdlDefineGenerator(maxExprSize: Int = 4, maxBlockSize: Int = 10) extends 
   } yield ApdlDefineTransform(funcDecl)
 
   /* APDL Transform DSL case class Generator */
+}
+
+class ApdlIncludeGenerators {
+
 }
