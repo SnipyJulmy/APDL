@@ -400,7 +400,3 @@ class ApdlDefineGenerators(maxExprSize: Int = 4, maxBlockSize: Int = 10) extends
 
   /* APDL Transform DSL case class Generator */
 }
-
-class ApdlIncludeGenerators {
-
-}
