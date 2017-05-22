@@ -1,6 +1,5 @@
 project_name = "Example"
 
-@include "apdl_type.apdl"
 @include "apdl_component.apdl"
 
 @device arduino1 {
