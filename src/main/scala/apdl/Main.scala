@@ -2,26 +2,25 @@ package apdl
 
 import java.io.File
 
-import apdl.parser.MainParsers
-
 import scala.io.Source
-import scala.language.postfixOps
-import scala.util.parsing.input.CharSequenceReader
 
 case class ApdlConfig(
                        mainFile: File = new File("."),
-                       outputDirectory: File = new File("./default-apdl-output")
+                       outputDirectory: File = new File("./default-apdl-output"),
+                       overrideExistingProject: Boolean = true,
+                       debug: Boolean = true
                      )
 
 object Main extends App {
 
+  implicit val config = ApdlConfig()
+  implicit val debug : Boolean = config.debug
+
   val input = "example.apdl"
   val source = Source.fromFile(input).mkString
   val manager = new ApdlProjectManager(source)
-
-  val project = manager.project
-
-  println(project)
+  val generator = new ProjectGenerator(manager.project)
+  generator.mkProject()
 
   /*
 
@@ -49,27 +48,4 @@ object Main extends App {
     }
   }
   */
-}
-
-object Try extends App {
-  val code =
-    """|@device arduino1 {
-       |    id = uno
-       |    framework = arduino
-       |    @input rawTemp analogInput 1
-       |    @input lum analogInput 0
-       |    @input temp tf rawTemp
-       |    @input lumTemp simpleOperator + lum temp
-       |    @serial lum each 1 s
-       |    @serial temp each 1 s
-       |}""".stripMargin
-
-  val parsers = new MainParsers
-
-  import parsers._
-
-  parsers.parse(parsers.apdlDevice, new PackratReader[Char](new CharSequenceReader(code))) match {
-    case Success(result, next) => println(result)
-    case n: NoSuccess => println(s"$n")
-  }
 }
