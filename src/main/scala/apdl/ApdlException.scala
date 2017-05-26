@@ -21,3 +21,5 @@ class ApdlFormatException(s: String) extends ApdlParserException(s)
 class ApdlTestException(s: String) extends ApdlBaseException(s)
 
 class ApdlProjectException(s: String) extends ApdlBaseException(s)
+
+class ApdlDirectoryException(s: String) extends ApdlBaseException(s)
