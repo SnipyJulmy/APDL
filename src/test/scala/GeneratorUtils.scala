@@ -385,9 +385,13 @@ class ApdlDefineGenerators(maxExprSize: Int = 4, maxBlockSize: Int = 10) extends
     gen <- Gen.listOf(genGen)
   } yield (id zip gen).toMap
 
-  def inGen: Gen[List[Parameter]] = Gen.listOf(genParameter).suchThat(_.nonEmpty)
+  def inGen: Gen[Inputs] = for {
+    params <- Gen.nonEmptyListOf(genParameter)
+  } yield Inputs(params)
 
-  def outGen: Gen[ApdlType] = typGen
+  def outGen: Gen[Output] = for {
+    t <- typGen
+  } yield Output(t)
 
   def genDefineComponent: Gen[ApdlDefineComponent] = for {
     id <- Gen.identifier

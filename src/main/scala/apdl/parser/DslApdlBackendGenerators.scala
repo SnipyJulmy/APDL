@@ -18,11 +18,11 @@ trait DslApdlBackendGenerators extends TransformApdlBackendGenerators {
          |  ${gens map toApdlCode mkString "\n"}
          |}
        """.stripMargin
-    case ApdlDefineComponent(name, parameters, inputs, outputType, gens) =>
+    case ApdlDefineComponent(name, parameters, inputs, output, gens) =>
       s"""
          |@define component $name ${parameters map toApdlCode mkString " "} {
-         |  @in ${inputs map toApdlCode mkString " "}
-         |  @out ${toApdlCode(outputType)}
+         |  ${toApdlCode(inputs)}
+         |  ${toApdlCode(output)}
          |  ${gens map toApdlCode mkString "\n"}
          |}
        """.stripMargin
@@ -42,6 +42,10 @@ trait DslApdlBackendGenerators extends TransformApdlBackendGenerators {
        |}
      """.stripMargin
   }
+
+  def toApdlCode(inputs: Inputs) : String = s"@in ${toApdlCode(inputs.parameters)}"
+
+  def toApdlCode(output: Output) : String = s"@out ${toApdlCode(output.outputType)}"
 
   def toApdlCode(outputType: ApdlType): String = outputType match {
     case Num => "num"
