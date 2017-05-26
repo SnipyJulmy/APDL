@@ -36,5 +36,4 @@ project/plugins/project/
 /src/main/resources/example.toml
 /src/main/resources/example.saml
 /bak/
-/example.apdl
-/apdl_component.apdl
+/default-apdl-output/
