@@ -1,49 +1,23 @@
 package apdl
 
-class ApdlDslException(s: String) extends Throwable {
+abstract class ApdlBaseException(msg: String) extends Throwable {
   def this() = this("")
 
   override def toString: String = {
-    s"$s ${super.toString}"
+    s"$msg ${super.toString}"
   }
 }
 
-class ApdlParserException(s: String) extends Throwable {
-  def this() = this("")
+class ApdlDslException(s: String) extends ApdlBaseException(s)
 
-  override def toString: String = {
-    s"$s ${super.toString}"
-  }
-}
+class ApdlParserException(s: String) extends ApdlBaseException(s)
 
-class ApdlArgsException(s: String) extends Throwable {
-  def this() = this("")
+class ApdlArgsException(s: String) extends ApdlBaseException(s)
 
-  override def toString: String = {
-    s"$s ${super.toString}"
-  }
-}
+class ApdlBackendException(s: String) extends ApdlBaseException(s)
 
-class ApdlBackendException(s: String) extends Throwable {
-  def this() = this("")
+class ApdlFormatException(s: String) extends ApdlParserException(s)
 
-  override def toString: String = {
-    s"$s ${super.toString}"
-  }
-}
+class ApdlTestException(s: String) extends ApdlBaseException(s)
 
-class ApdlFormatException(s: String) extends ApdlParserException {
-  def this() = this("")
-
-  override def toString: String = {
-    s"$s ${super.toString}"
-  }
-}
-
-class ApdlTestException(s: String) extends Throwable {
-  def this() = this("")
-
-  override def toString: String = {
-    s"$s ${super.toString}"
-  }
-}
+class ApdlProjectException(s: String) extends ApdlBaseException(s)
