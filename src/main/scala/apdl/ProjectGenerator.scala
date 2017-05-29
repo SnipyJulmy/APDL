@@ -121,11 +121,16 @@ class ProjectGenerator(project: ApdlProject)(implicit config: ApdlConfig) {
 
   case class DeviceProject(rootDir: File, srcDir: File, libDir: File, project: ApdlProject, device: ApdlDevice) {
     def generateProject(): Unit = {
+      // Generate the platformio project
       val boards = getBoards(device.id)
       val board = boards.find(_.id == device.id).getOrElse(throw new ApdlProjectException(s"Can't get info for board : ${device.id}"))
       val platform = board.platform
       val platformIOIniInfo: PlatformIOIniInfo = PlatformIOIniInfo(device.id, device.framework, platform, None)
       generatePlatformIOIni(rootDir, platformIOIniInfo)
+
+      // generate the src
+      val generator = new CLikeCodeGenerator(project, device)
+      generator.mkDevice(srcDir)
     }
   }
 }
