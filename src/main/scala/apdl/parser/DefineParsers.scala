@@ -64,7 +64,13 @@ case class Inputs(parameters: List[Parameter])
 case class Output(outputType: ApdlType)
 case class Gen(global: String, setup: String, loop: String, expr: String)
 
-sealed trait ApdlDefine
+sealed trait ApdlDefine {
+  def identifier: String = this match {
+    case ApdlDefineInput(name, _, _) => name
+    case ApdlDefineComponent(name, _, _, _, _) => name
+    case ApdlDefineTransform(functionDecl) => functionDecl.header.identifier
+  }
+}
 case class ApdlDefineInput(name: String, parameters: List[Parameter], gens: Map[String, Gen]) extends ApdlDefine
 case class ApdlDefineComponent(name: String, parameters: List[Parameter], inputs: Inputs, outputType: Output, gens: Map[String, Gen]) extends ApdlDefine
 case class ApdlDefineTransform(functionDecl: FunctionDecl) extends ApdlDefine
