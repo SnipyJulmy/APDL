@@ -24,6 +24,7 @@ class ProjectGenerator(project: ApdlProject)(implicit config: ApdlConfig) {
   private val rootOutputDir = config.outputDirectory
   implicit private val debugEnable = config.debug
 
+
   def mkProject(): Unit = {
     Try {
       // Create the root directory
@@ -41,18 +42,24 @@ class ProjectGenerator(project: ApdlProject)(implicit config: ApdlConfig) {
       // Generate the project for each device
       deviceProjects.foreach(_.generateProject())
     } match {
-      case Failure(exception) => exitOnFailure(exception.getMessage)
+      case Failure(exception) => exitOnFailure(exception)
       case _ =>
     }
   }
 
   def recursiveDelete(root: File): Boolean = {
-    for (file <- root.listFiles()) {
-      debug(s"remove ${file.getAbsolutePath}")
-      recursiveDelete(file)
-    }
-    debug(s"remove ${root.getAbsolutePath}")
-    root.delete()
+    if (root != null) {
+      val files = root.listFiles()
+      if (files == null) true
+      else for (file <- files) {
+        if (file != null) {
+          debug(s"remove ${file.getAbsolutePath}")
+          recursiveDelete(file)
+        }
+      }
+      debug(s"remove ${root.getAbsolutePath}")
+      root.delete()
+    } else true
   }
 
   def mkDir(dir: File): File = {
