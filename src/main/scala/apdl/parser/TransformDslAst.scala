@@ -18,7 +18,7 @@ case class True() extends Expr
 case class False() extends Expr
 case class Or(left: Expr, right: Expr) extends Expr
 case class And(left: Expr, right: Expr) extends Expr
-case class Not(booleanExpr: Expr) extends Expr
+case class Not(expr: Expr) extends Expr
 case class Greater(left: Expr, right: Expr) extends Expr
 case class Smaller(left: Expr, right: Expr) extends Expr
 case class GreaterEquals(left: Expr, right: Expr) extends Expr
