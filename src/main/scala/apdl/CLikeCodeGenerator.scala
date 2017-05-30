@@ -1,66 +1,14 @@
 package apdl
 
-import java.io.{File, PrintWriter, StringWriter}
+import java.io.File
 
 import apdl.ApdlUtils._
-import apdl.parser.{ApdlDevice, ApdlProject, ApdlType}
-
-import scala.collection.mutable
-
-class ApdlPw(file: File) {
-  require(file.exists())
-  require(file.canWrite)
-
-  private val function = new StringWriter
-  private val global = new StringWriter
-  private val setup = new StringWriter
-  private val loop = new StringWriter
-
-  val pw = new PrintWriter(file)
-
-  def printlnFunction(str: String): Unit = {
-    printFunction(s"$str\n")
-  }
-
-  def printFunction(str: String): Unit = {
-    function.append(str)
-    function.flush()
-  }
-
-  def printlnGlobal(str: String): Unit = {
-    printGlobal(s"$str\n")
-  }
-
-  def printGlobal(str: String): Unit = {
-    global.append(str)
-    global.flush()
-  }
-
-  def printlnSetup(str: String): Unit = {
-    printSetup(s"$str\n")
-  }
-
-  def printSetup(str: String): Unit = {
-    setup.append(str)
-    setup.flush()
-  }
-
-  def printlnLoop(str: String): Unit = {
-    printLoop(s"$str\n")
-  }
-
-  def printLoop(str: String): Unit = {
-    loop.append(str)
-    loop.flush()
-  }
-
-  def close(): Unit = {
-    pw.flush()
-    pw.close()
-  }
-}
+import apdl.parser._
 
 class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val debugEnable: Boolean) {
+
+  private val defines: List[ApdlDefine] = project.defineInputs ::: project.defineTransforms ::: project.defineComponents
+  private val transformCodeGen = new CLikeTransformCodeGenerator
 
   def mkDevice(srcDir: File): Unit = {
     val ext = fileExtension(device.framework)
@@ -68,9 +16,10 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
     if (!mainFile.createNewFile())
       throw new ApdlDirectoryException(s"Can't create file ${mainFile.getAbsolutePath}")
     debug(s"create file ${mainFile.getAbsolutePath}")
-    implicit val mainPw = new ApdlPw(mainFile)
+    val mainPw = new ApdlPrintWriter(mainFile)
     generateInputs(mainPw)
     generateSerial(mainPw)
+    mainPw.close()
   }
 
   def fileExtension(framework: String): String = framework match {
@@ -79,32 +28,38 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
     case _ => throw new ApdlCodeGenerationException(s"Unknow framework : $framework")
   }
 
-  def generateInputs(out: ApdlPw): Unit = device.inputs.foreach { input =>
-    val defineInput = project.defineInputs
-      .find(_.name == input.defineInputName)
-      .getOrElse(throw new ApdlCodeGenerationException(s"Unknow define input : ${input.defineInputName}"))
+  def generateInputs(out: ApdlPrintWriter): Unit = device.inputs.foreach { input =>
 
-    val gen = defineInput.gens.getOrElse(
-      device.framework,
-      throw new ApdlCodeGenerationException(s"Unknow framework for device ${device.name} : ${device.framework}")
-    )
+    val definition = defines
+      .find(_.identifier == input.defineInputName)
+      .getOrElse(throw new ApdlCodeGenerationException(s"Unknow definition input : ${input.defineInputName}"))
 
-    // identifier variable
-    implicit val symbols: mutable.Map[String, ApdlType] = mutable.Map("@id" -> ApdlType.Id)
-    // input parameters variable
-    defineInput.parameters.foreach { p =>
-      symbols.put(s"@${p.id}", p.typ)
+    definition match {
+      case ApdlDefineInput(name, parameters, gens) =>
+        val gen = gens.get(device.framework) match {
+          case Some(value) => value
+          case None => throw new ApdlCodeGenerationException(s"Unknow framework for define inputs $name")
+        }
+        out.printGlobal(gen.global)
+        out.printSetup(gen.setup)
+        out.printLoop(gen.loop)
+      case ApdlDefineComponent(name, parameters, inputs, outputType, gens) =>
+      case ApdlDefineTransform(functionDecl) =>
+        out.printFunction(transformCodeGen(functionDecl))
+        SymbolTable.add(functionDecl.header.identifier,
+          Transform(
+            functionDecl.header.identifier, functionDecl.header.parameters.map(_.typ), functionDecl.header.resultType)
+        )
     }
 
     // Generate the code
-
   }
 
   private def replaceVariable(str: String, symbols: Map[String, ApdlType]): String = {
     ""
   }
 
-  def generateSerial(out: ApdlPw): Unit = {
+  def generateSerial(out: ApdlPrintWriter): Unit = {
 
   }
 }
@@ -115,5 +70,98 @@ object IdGenerator {
   def nextVariable(id: String): String = {
     itr = itr + 1
     s"${id}_$itr"
+  }
+}
+
+class CLikeTransformCodeGenerator {
+  def apply(apdlAst: ApdlAst): String = apdlAst match {
+    case e: Expr => e match {
+      case Add(left, right) => s"(${apply(left)} + ${apply(right)})"
+      case Mul(left, right) => s"(${apply(left)} * ${apply(right)})"
+      case Sub(left, right) => s"(${apply(left)} - ${apply(right)})"
+      case Div(left, right) => s"(${apply(left)} / ${apply(right)})"
+      case Cast(tfTyp, expr) => s"((${apply(tfTyp)})${apply(expr)})"
+      case Literal(value) => s"$value"
+      case Symbol(name) => s"$name"
+      case FunctionCall(funcName, args) => s"$funcName(${args map apply mkString ","})"
+      case ArrayAccess(array, field) => s"${apply(array)}[${apply(field)}]"
+      case VarAssignement(target, value) => s"${apply(target)} = ${apply(value)}"
+      case True() => s"1"
+      case False() => s"0"
+      case Or(left, right) => s"(${apply(left)} || ${apply(right)})"
+      case And(left, right) => s"(${apply(left)} && ${apply(right)})"
+      case Not(booleanExpr) => s"(! ${apply(booleanExpr)})"
+      case Greater(left, right) => s"(${apply(left)} > ${apply(right)})"
+      case Smaller(left, right) => s"(${apply(left)} < ${apply(right)})"
+      case GreaterEquals(left, right) => s"(${apply(left)} >= ${apply(right)})"
+      case SmallerEquals(left, right) => s"(${apply(left)} <= ${apply(right)})"
+      case Equals(left, right) => s"(${apply(left)} == ${apply(right)})"
+      case NotEquals(left, right) => s"(${apply(left)} != ${apply(right)})"
+    }
+    case t: TfRetTyp => t match {
+      case TfInt => "int"
+      case TfLong => "long"
+      case TfByte => "byte"
+      case TfShort => "short"
+      case TfChar => "char"
+      case TfDouble => "double"
+      case TfFloat => "float"
+      case TfVoid => "void"
+      case TfArray(typ: TfTyp) => s"${apply(typ)}*"
+    }
+    case TypedIdentifier(name, typ) => s"$name ${apply(typ)}"
+    case s: Statement => s match {
+      case While(cond, statement) =>
+        s"""
+           |while(${apply(cond)})
+           |  ${apply(statement)}
+         """.stripMargin
+      case DoWhile(cond, statement) =>
+        s"""
+           |do
+           |  ${apply(statement)}
+           |while (${apply(cond)});
+         """.stripMargin
+      case IfThenElse(cond, trueBranch, falseBranch) =>
+        s"""
+           |if(${apply(cond)})
+           |  ${apply(trueBranch)}
+           |else
+           |  ${apply(falseBranch)}
+         """.stripMargin
+      case IfThen(cond, ifTrue) =>
+        s"""
+           |if(${apply(cond)})
+           |  ${apply(ifTrue)}
+         """.stripMargin
+      case Return(expr) => s"return ${apply(expr)};"
+      case Break() => s"break;"
+      case Continue() => s"continue;"
+      case Block(statements) =>
+        s"""
+           |{
+           |  ${statements map apply mkString "\n"}
+           |}
+         """.stripMargin
+      case ExpressionStatement(expression) => s"${apply(expression)};"
+      case decl: Declaration => decl match {
+        case FunctionDecl(header, body) =>
+          s"""
+             |${header.resultType} ${header.identifier} (${header.parameters map apply mkString ","}) {
+             |  ${apply(body.body)}
+             |}
+           """.stripMargin
+        case NewVal(symbol, typ, init) => s"${apply(typ)} ${apply(symbol)} = ${apply(init)};"
+        case NewVar(symbol, typ, init) => init match {
+          case Some(value) => s"${apply(typ)} ${apply(symbol)} = ${apply(value)};"
+          case None => s"${apply(typ)} ${apply(symbol)};"
+        }
+        case NewArray(symbol, typ, init) => s"${apply(typ)} ${apply(symbol)} = ${apply(init)};"
+      }
+    }
+    case arrayInit: ArrayInit => arrayInit match {
+      case ArrayInitValue(values) => s"{${values map apply mkString ","}"
+      case ArrayInitCapacity(capacity) => s"[${apply(capacity)}]"
+    }
   }
 }
