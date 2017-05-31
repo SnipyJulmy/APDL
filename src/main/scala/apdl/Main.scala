@@ -2,6 +2,8 @@ package apdl
 
 import java.io.File
 
+import apdl.generation.{ApdlProjectManager, ProjectGenerator}
+
 import scala.io.Source
 
 case class ApdlConfig(

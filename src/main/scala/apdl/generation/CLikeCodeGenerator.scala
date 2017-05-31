@@ -9,7 +9,11 @@ import apdl.parser._
 class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val debugEnable: Boolean) {
 
   private val defines: List[ApdlDefine] = project.defineInputs ::: project.defineTransforms ::: project.defineComponents
-  private val transformCodeGen = new CLikeTransformCodeGenerator
+  private val transformCodeGen: CLikeTransformCodeGenerator = new CLikeTransformCodeGenerator
+  private val framework: ApdlFramework = ApdlFramework.valueOf(device.framework) match {
+    case Some(value) => value
+    case None => throw new ApdlProjectException(s"Unknow framework ${device.framework}")
+  }
 
   def mkDevice(srcDir: File): Unit = {
     val ext = fileExtension(device.framework)
@@ -17,7 +21,7 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
     if (!mainFile.createNewFile())
       throw new ApdlDirectoryException(s"Can't create file ${mainFile.getAbsolutePath}")
     debug(s"create file ${mainFile.getAbsolutePath}")
-    val mainPw = new ApdlArduinoPrintWriter(mainFile)
+    val mainPw = ApdlPrintWriter.getPw(framework)(mainFile)
     generateInputs(mainPw)
     generateSerial(mainPw)
     mainPw.close()
@@ -47,7 +51,7 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
       case ApdlDefineComponent(name, parameters, inputs, outputType, gens) =>
         val gen = gens.get(device.framework) match {
           case Some(value) => value
-          case None =>throw new ApdlCodeGenerationException(s"Unknow framework for define component $name")
+          case None => throw new ApdlCodeGenerationException(s"Unknow framework for define component $name")
         }
         out.printlnGlobal(gen.global)
         out.printlnSetup(gen.setup)
