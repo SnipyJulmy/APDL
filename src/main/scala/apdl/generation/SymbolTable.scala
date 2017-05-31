@@ -1,5 +1,6 @@
-package apdl
+package apdl.generation
 
+import apdl.ApdlCodeGenerationException
 import apdl.parser.{TfRetTyp, TfTyp}
 
 import scala.collection.mutable

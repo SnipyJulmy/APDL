@@ -1,8 +1,9 @@
-package apdl
+package apdl.generation
 
 import java.io.File
 
 import apdl.ApdlUtils._
+import apdl._
 import apdl.parser._
 
 class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val debugEnable: Boolean) {
@@ -28,7 +29,7 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
     case _ => throw new ApdlCodeGenerationException(s"Unknow framework : $framework")
   }
 
-  def generateInputs(out: ApdlCLikePrintWriter): Unit = device.inputs.foreach { input =>
+  def generateInputs(out: ApdlPrintWriter): Unit = device.inputs.foreach { input =>
 
     val definition = defines
       .find(_.identifier == input.defineInputName)
@@ -66,7 +67,7 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
     ""
   }
 
-  def generateSerial(out: ApdlCLikePrintWriter): Unit = {
+  def generateSerial(out: ApdlPrintWriter): Unit = {
 
   }
 }

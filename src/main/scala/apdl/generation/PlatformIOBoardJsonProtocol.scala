@@ -1,4 +1,4 @@
-package apdl
+package apdl.generation
 
 import spray.json._
 

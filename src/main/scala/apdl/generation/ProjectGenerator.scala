@@ -1,8 +1,9 @@
-package apdl
+package apdl.generation
 
 import java.io.{File, PrintWriter}
 
 import apdl.ApdlUtils._
+import apdl._
 import apdl.parser.{ApdlDevice, ApdlProject}
 
 import scala.util.{Failure, Try}

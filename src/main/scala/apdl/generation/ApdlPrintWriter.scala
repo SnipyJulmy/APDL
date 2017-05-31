@@ -1,12 +1,12 @@
-package apdl
+package apdl.generation
 
 import java.io.{File, PrintWriter, StringWriter}
 
-class ApdlCLikePrintWriter(file: File) {
+abstract class ApdlPrintWriter(file: File) {
   require(file.exists())
   require(file.canWrite)
 
-  private val function = new StringWriter
+  private[apdl] val function = new StringWriter
   private val global = new StringWriter
   private val setup = new StringWriter
   private val loop = new StringWriter
@@ -61,6 +61,20 @@ class ApdlCLikePrintWriter(file: File) {
          | // Global
          | ${global.toString}
        """.stripMargin)
+    pw.flush()
+    pw.close()
+  }
+}
+
+class ApdlCLikePrintWriter(file: File) extends ApdlPrintWriter(file) {
+  override def close(): Unit = {
+    pw.append {
+      s"""
+         |#include <stdbool.h>
+         |
+         |${function.toString}
+       """.stripMargin
+    }
     pw.flush()
     pw.close()
   }

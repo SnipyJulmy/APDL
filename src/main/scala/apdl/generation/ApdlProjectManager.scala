@@ -1,5 +1,6 @@
-package apdl
+package apdl.generation
 
+import apdl.ApdlParserException
 import apdl.parser.{ApdlProject, IncludeProcessor, MainParsers}
 
 import scala.util.parsing.input.CharSequenceReader
