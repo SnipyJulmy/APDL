@@ -16,7 +16,7 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
     if (!mainFile.createNewFile())
       throw new ApdlDirectoryException(s"Can't create file ${mainFile.getAbsolutePath}")
     debug(s"create file ${mainFile.getAbsolutePath}")
-    val mainPw = new ApdlPrintWriter(mainFile)
+    val mainPw = new ApdlCLikePrintWriter(mainFile)
     generateInputs(mainPw)
     generateSerial(mainPw)
     mainPw.close()
@@ -28,7 +28,7 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
     case _ => throw new ApdlCodeGenerationException(s"Unknow framework : $framework")
   }
 
-  def generateInputs(out: ApdlPrintWriter): Unit = device.inputs.foreach { input =>
+  def generateInputs(out: ApdlCLikePrintWriter): Unit = device.inputs.foreach { input =>
 
     val definition = defines
       .find(_.identifier == input.defineInputName)
@@ -66,7 +66,7 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
     ""
   }
 
-  def generateSerial(out: ApdlPrintWriter): Unit = {
+  def generateSerial(out: ApdlCLikePrintWriter): Unit = {
 
   }
 }

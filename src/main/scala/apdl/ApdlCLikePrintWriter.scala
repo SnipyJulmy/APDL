@@ -2,7 +2,7 @@ package apdl
 
 import java.io.{File, PrintWriter, StringWriter}
 
-class ApdlPrintWriter(file: File) {
+class ApdlCLikePrintWriter(file: File) {
   require(file.exists())
   require(file.canWrite)
 
