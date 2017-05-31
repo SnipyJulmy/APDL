@@ -40,10 +40,17 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
           case Some(value) => value
           case None => throw new ApdlCodeGenerationException(s"Unknow framework for define inputs $name")
         }
-        out.printGlobal(gen.global)
-        out.printSetup(gen.setup)
-        out.printLoop(gen.loop)
+        out.printlnGlobal(gen.global)
+        out.printlnSetup(gen.setup)
+        out.printlnLoop(gen.loop)
       case ApdlDefineComponent(name, parameters, inputs, outputType, gens) =>
+        val gen = gens.get(device.framework) match {
+          case Some(value) => value
+          case None =>throw new ApdlCodeGenerationException(s"Unknow framework for define component $name")
+        }
+        out.printlnGlobal(gen.global)
+        out.printlnSetup(gen.setup)
+        out.printlnLoop(gen.loop)
       case ApdlDefineTransform(functionDecl) =>
         out.printFunction(transformCodeGen(functionDecl))
         SymbolTable.add(functionDecl.header.identifier,
@@ -107,6 +114,7 @@ class CLikeTransformCodeGenerator {
       case TfDouble => "double"
       case TfFloat => "float"
       case TfVoid => "void"
+      case TfBoolean => "bool"
       case TfArray(typ: TfTyp) => s"${apply(typ)}*"
     }
     case TypedIdentifier(name, typ) => s"$name ${apply(typ)}"
@@ -145,11 +153,11 @@ class CLikeTransformCodeGenerator {
          """.stripMargin
       case ExpressionStatement(expression) => s"${apply(expression)};"
       case decl: Declaration => decl match {
+        // No { or } because the body is always a block and the block already generate the {}
         case FunctionDecl(header, body) =>
           s"""
-             |${header.resultType} ${header.identifier} (${header.parameters map apply mkString ","}) {
+             |${apply(header.resultType)} ${header.identifier} (${header.parameters map apply mkString ","})
              |  ${apply(body.body)}
-             |}
            """.stripMargin
         case NewVal(symbol, typ, init) => s"${apply(typ)} ${apply(symbol)} = ${apply(init)};"
         case NewVar(symbol, typ, init) => init match {
