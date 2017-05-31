@@ -17,7 +17,7 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
     if (!mainFile.createNewFile())
       throw new ApdlDirectoryException(s"Can't create file ${mainFile.getAbsolutePath}")
     debug(s"create file ${mainFile.getAbsolutePath}")
-    val mainPw = new ApdlCLikePrintWriter(mainFile)
+    val mainPw = new ApdlArduinoPrintWriter(mainFile)
     generateInputs(mainPw)
     generateSerial(mainPw)
     mainPw.close()
