@@ -2,16 +2,19 @@ package apdl.generation
 
 import java.io.{File, PrintWriter, StringWriter}
 
+import apdl.ApdlFramework
+import apdl.ApdlFramework.{Arduino, Mbed}
+
 abstract class ApdlPrintWriter(file: File) {
   require(file.exists())
   require(file.canWrite)
 
-  private[apdl] val function = new StringWriter
-  private val global = new StringWriter
-  private val setup = new StringWriter
-  private val loop = new StringWriter
+  private[generation] val function = new StringWriter
+  private[generation] val global = new StringWriter
+  private[generation] val setup = new StringWriter
+  private[generation] val loop = new StringWriter
 
-  val pw = new PrintWriter(file)
+  private[generation] val pw = new PrintWriter(file)
 
   def printlnFunction(str: String): Unit = {
     printFunction(s"$str\n")
@@ -66,16 +69,61 @@ abstract class ApdlPrintWriter(file: File) {
   }
 }
 
-class ApdlCLikePrintWriter(file: File) extends ApdlPrintWriter(file) {
+case class ApdlArduinoPrintWriter(file: File) extends ApdlPrintWriter(file) {
   override def close(): Unit = {
     pw.append {
       s"""
          |#include <stdbool.h>
          |
+         |${global.toString}
+         |
          |${function.toString}
+         |
+         |void loop() {
+         |  ${loop.toString}
+         |}
+         |
+         |void setup() {
+         |  ${setup.toString}
+         |}
+         |
        """.stripMargin
     }
     pw.flush()
     pw.close()
+  }
+}
+
+case class ApdlMbedPrintWriter(file: File) extends ApdlPrintWriter(file) {
+  override def close(): Unit = {
+    pw.append {
+      s"""
+         |#include <stdbool.h>
+         |
+         |${global.toString}
+         |
+         |${function.toString}
+         |
+         |void main(void) {
+         |  // Setup
+         |  ${setup.toString}
+         |
+         |  // Loop
+         |  while(1) {
+         |    ${loop.toString}
+         |  }
+         |}
+         |
+       """.stripMargin
+    }
+    pw.flush()
+    pw.close()
+  }
+}
+
+object ApdlPrintWriter {
+  def getPw(framework : ApdlFramework) : (File) => ApdlPrintWriter = framework match {
+    case Arduino => ApdlArduinoPrintWriter.apply
+    case Mbed => ApdlMbedPrintWriter.apply
   }
 }
