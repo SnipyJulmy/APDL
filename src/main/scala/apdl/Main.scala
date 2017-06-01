@@ -1,22 +1,13 @@
 package apdl
 
-import java.io.File
-
 import apdl.generation.{ApdlProjectManager, ProjectGenerator}
 
 import scala.io.Source
 
-case class ApdlConfig(
-                       mainFile: File = new File("."),
-                       outputDirectory: File = new File("./default-apdl-output"),
-                       overrideExistingProject: Boolean = true,
-                       debug: Boolean = true
-                     )
 
 object Main extends App {
 
   implicit val config = ApdlConfig()
-  implicit val debug : Boolean = config.debug
 
   val input = "example.apdl"
   val source = Source.fromFile(input).mkString
