@@ -11,7 +11,7 @@ import scala.Function._
 
 class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val config: ApdlConfig) {
 
-  private val symbolTable : SymbolTable = new SymbolTable
+  private val symbolTable: SymbolTable = new SymbolTable
   private val defines: List[ApdlDefine] = project.defineInputs ::: project.defineTransforms ::: project.defineComponents
   private val transformCodeGen: CLikeTransformCodeGenerator = new CLikeTransformCodeGenerator
   private val framework: ApdlFramework = ApdlFramework.valueOf(device.framework) match {
@@ -26,8 +26,10 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
       throw new ApdlDirectoryException(s"Can't create file ${mainFile.getAbsolutePath}")
     debug(s"create file ${mainFile.getAbsolutePath}")
     val mainPw = ApdlPrintWriter.getPw(framework)(mainFile)
+    debug(s"Generate inputs for device ${device.name}")
     generateInputs(mainPw)
-    generateSerial(mainPw)
+    debug(s"Generate serials for device ${device.name}")
+    generateSerials(mainPw)
     mainPw.close()
   }
 
@@ -84,17 +86,18 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
 
       // Transform
       case ApdlDefineTransform(functionDecl) =>
-        out.printFunction(transformCodeGen(functionDecl))
-        symbolTable.add(functionDecl.header.identifier,
-          Transform(
-            functionDecl.header.identifier, functionDecl.header.parameters.map(_.typ), functionDecl.header.resultType)
-        )
+        // Generate code for function, only once !
+        if (!symbolTable.contains(functionDecl.header.identifier)) {
+          out.printFunction(transformCodeGen(functionDecl))
+          symbolTable.add(functionDecl.header.identifier,
+            Transform(
+              functionDecl.header.identifier, functionDecl.header.parameters.map(_.typ), functionDecl.header.resultType)
+          )
+        }
     }
-
-    // Generate the code
   }
 
-  def generateSerial(out: ApdlPrintWriter): Unit = {
+  def generateSerials(out: ApdlPrintWriter): Unit = {
 
   }
 
