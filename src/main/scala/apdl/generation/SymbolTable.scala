@@ -23,6 +23,8 @@ class SymbolTable {
       case None => throw new ApdlCodeGenerationException(s"Unknow symbol $symbol")
     }
   }
+
+  def contains(symbol: String) : Boolean = map.contains(symbol)
 }
 
 sealed trait SymbolTableElement
