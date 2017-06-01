@@ -4,11 +4,12 @@ import java.io.File
 
 import apdl.ApdlUtils._
 import apdl._
+import apdl.parser.DefineUtils._
 import apdl.parser._
 
 import scala.Function._
 
-class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val debugEnable: Boolean) {
+class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val config: ApdlConfig) {
 
   private val defines: List[ApdlDefine] = project.defineInputs ::: project.defineTransforms ::: project.defineComponents
   private val transformCodeGen: CLikeTransformCodeGenerator = new CLikeTransformCodeGenerator
@@ -35,40 +36,51 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
     case _ => throw new ApdlCodeGenerationException(s"Unknow framework : $framework")
   }
 
-  def zipArgWithIdentifier(args: List[String], parameters: List[Parameter]): Map[String, String] = {
-    require(args.length == parameters.length, s"parameter size and arguments size are not the same : ${parameters.length} != ${args.length}")
-    (args zip parameters) map tupled((s, p) => p.id -> s) toMap
+  def zipArgWithIdentifier(args: List[String], defineParameters: List[Parameter], inputsParameters: List[Parameter]): Map[String, String] = {
+    val params = defineParameters ::: inputsParameters
+    require(args.length == params.length, s"parameter size and arguments size are not the same : ${args.length} != ${params.length}")
+    (args zip params) map tupled((s, p) => p.id -> s) toMap
   }
 
   def generateInputs(out: ApdlPrintWriter): Unit = device.inputs.foreach { input =>
 
     // Find the define component (like the type of the input)
-    val definition = defines
-      .find(_.identifier == input.defineInputName)
-      .getOrElse(throw new ApdlCodeGenerationException(s"Unknow definition input : ${input.defineInputName}"))
-
+    val definition = defines.defineFromString(input.defineInputName)
 
     definition match {
+
+      // Input
       case ApdlDefineInput(name, parameters, gens) =>
         val gen = gens.get(device.framework) match {
           case Some(value) => value
           case None => throw new ApdlCodeGenerationException(s"Unknow framework for define inputs $name")
         }
 
-        // associate the args with the paramters name
-        val namedArgs = zipArgWithIdentifier(input.args, parameters)
+        // associate the args with the parameters name
+        implicit val namedArgs = zipArgWithIdentifier(input.args, parameters, List())
 
-        out.printlnGlobal(gen.global.replaceWithArgs(namedArgs))
-        out.printlnSetup(gen.setup.replaceWithArgs(namedArgs))
-        out.printlnLoop(gen.loop.replaceWithArgs(namedArgs))
+        out.printlnGlobal(gen.global.replaceWithArgs)
+        out.printlnSetup(gen.setup.replaceWithArgs)
+        out.printlnLoop(gen.loop.replaceWithArgs)
+
+        SymbolTable.add(input.identifier, Input(input.identifier, gen.expr.replaceWithArgs))
+
+      // Component
       case ApdlDefineComponent(name, parameters, inputs, outputType, gens) =>
         val gen = gens.get(device.framework) match {
           case Some(value) => value
           case None => throw new ApdlCodeGenerationException(s"Unknow framework for define component $name")
         }
-        out.printlnGlobal(gen.global)
-        out.printlnSetup(gen.setup)
-        out.printlnLoop(gen.loop)
+
+        implicit val namedArgs = zipArgWithIdentifier(input.args, parameters, inputs.parameters)
+
+        out.printlnGlobal(gen.global.replaceWithArgs)
+        out.printlnSetup(gen.setup.replaceWithArgs)
+        out.printlnLoop(gen.loop.replaceWithArgs)
+
+        SymbolTable.add(input.identifier, Component(input.identifier, gen.expr.replaceWithArgs))
+
+      // Transform
       case ApdlDefineTransform(functionDecl) =>
         out.printFunction(transformCodeGen(functionDecl))
         SymbolTable.add(functionDecl.header.identifier,
@@ -80,16 +92,12 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
     // Generate the code
   }
 
-  private def replaceVariable(str: String, symbols: Map[String, ApdlType]): String = {
-    ""
-  }
-
   def generateSerial(out: ApdlPrintWriter): Unit = {
 
   }
 
   implicit class ApdlScriptString(string: String) {
-    def replaceWithArgs(args: Map[String, String]): String = {
+    def replaceWithArgs(implicit args: Map[String, String]): String = {
       def inner(arguments: Map[String, String], acc: String): String = {
         if (arguments.isEmpty)
           acc
