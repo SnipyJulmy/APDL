@@ -1,5 +1,6 @@
 package apdl.parser
 
+import apdl.ApdlCodeGenerationException
 import apdl.parser.ApdlType.{Id, Num, Str}
 
 import scala.util.matching.Regex
@@ -49,7 +50,7 @@ class DefineParsers extends TransformDslParser with RegexParsers with PackratPar
   lazy val num: PackratParser[ApdlType.Num.type] = "num" ^^^ ApdlType.Num
   lazy val str: PackratParser[ApdlType.Str.type] = "str" ^^^ ApdlType.Str
   lazy val id: PackratParser[ApdlType.Id.type] = "id" ^^^ ApdlType.Id
-  lazy val apdlTypeInt : PackratParser[ApdlType.Int.type] = "int" ^^^ ApdlType.Int
+  lazy val apdlTypeInt: PackratParser[ApdlType.Int.type] = "int" ^^^ ApdlType.Int
 
   lazy val parameters: PackratParser[List[Parameter]] = rep(parameter)
   lazy val parameter: PackratParser[Parameter] = identifier ~ (":" ~> apdlType) ^^ { case (i ~ t) => Parameter(i, t) }
@@ -99,3 +100,14 @@ object ApdlType {
 
   def values: Seq[ApdlType] = Seq(Num, Str, Id)
 }
+
+object DefineUtils {
+  implicit class Defines(defines: List[ApdlDefine]) {
+    def defineFromString(stringIdentifier: String): ApdlDefine = {
+      defines
+        .find(_.identifier == stringIdentifier)
+        .getOrElse(throw new ApdlCodeGenerationException(s"Unknow definition input : $stringIdentifier"))
+    }
+  }
+}
+
