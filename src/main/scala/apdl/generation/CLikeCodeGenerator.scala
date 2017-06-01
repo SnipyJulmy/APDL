@@ -6,6 +6,8 @@ import apdl.ApdlUtils._
 import apdl._
 import apdl.parser._
 
+import scala.Function._
+
 class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val debugEnable: Boolean) {
 
   private val defines: List[ApdlDefine] = project.defineInputs ::: project.defineTransforms ::: project.defineComponents
@@ -33,11 +35,18 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
     case _ => throw new ApdlCodeGenerationException(s"Unknow framework : $framework")
   }
 
+  def zipArgWithIdentifier(args: List[String], parameters: List[Parameter]): Map[String, String] = {
+    require(args.length == parameters.length, s"parameter size and arguments size are not the same : ${parameters.length} != ${args.length}")
+    (args zip parameters) map tupled((s, p) => p.id -> s) toMap
+  }
+
   def generateInputs(out: ApdlPrintWriter): Unit = device.inputs.foreach { input =>
 
+    // Find the define component (like the type of the input)
     val definition = defines
       .find(_.identifier == input.defineInputName)
       .getOrElse(throw new ApdlCodeGenerationException(s"Unknow definition input : ${input.defineInputName}"))
+
 
     definition match {
       case ApdlDefineInput(name, parameters, gens) =>
@@ -45,9 +54,13 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
           case Some(value) => value
           case None => throw new ApdlCodeGenerationException(s"Unknow framework for define inputs $name")
         }
-        out.printlnGlobal(gen.global)
-        out.printlnSetup(gen.setup)
-        out.printlnLoop(gen.loop)
+
+        // associate the args with the paramters name
+        val namedArgs = zipArgWithIdentifier(input.args, parameters)
+
+        out.printlnGlobal(gen.global.replaceWithArgs(namedArgs))
+        out.printlnSetup(gen.setup.replaceWithArgs(namedArgs))
+        out.printlnLoop(gen.loop.replaceWithArgs(namedArgs))
       case ApdlDefineComponent(name, parameters, inputs, outputType, gens) =>
         val gen = gens.get(device.framework) match {
           case Some(value) => value
@@ -73,6 +86,21 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
 
   def generateSerial(out: ApdlPrintWriter): Unit = {
 
+  }
+
+  implicit class ApdlScriptString(string: String) {
+    def replaceWithArgs(args: Map[String, String]): String = {
+      def inner(arguments: Map[String, String], acc: String): String = {
+        if (arguments.isEmpty)
+          acc
+        else {
+          val (id, value) = arguments.head
+          inner(arguments.tail, acc.replace("@" + id, value))
+        }
+      }
+
+      inner(args, string)
+    }
   }
 }
 
