@@ -1,4 +1,4 @@
-@define input analogInput pin:id {
+@define input analogInput pin:int {
     @gen mbed {
         global = "AnalogIn @id(A@pin)"
         setup = ""
@@ -13,7 +13,7 @@
     }
 }
 
-@define input digitalInput pin:id {
+@define input digitalInput pin:int {
     @gen mbed {
         global = "DigitalIn @id(D@pin)"
         setup = ""
