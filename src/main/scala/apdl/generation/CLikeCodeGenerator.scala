@@ -11,6 +11,7 @@ import scala.Function._
 
 class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val config: ApdlConfig) {
 
+  private val symbolTable : SymbolTable = new SymbolTable
   private val defines: List[ApdlDefine] = project.defineInputs ::: project.defineTransforms ::: project.defineComponents
   private val transformCodeGen: CLikeTransformCodeGenerator = new CLikeTransformCodeGenerator
   private val framework: ApdlFramework = ApdlFramework.valueOf(device.framework) match {
@@ -39,7 +40,7 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
   def zipArgWithIdentifier(args: List[String], defineParameters: List[Parameter], inputsParameters: List[Parameter]): Map[String, String] = {
     val params = defineParameters ::: inputsParameters
     require(args.length == params.length, s"parameter size and arguments size are not the same : ${args.length} != ${params.length}")
-    (args zip params) map tupled((s, p) => p.id -> s) toMap
+    ((args zip params) map tupled((s, p) => p.id -> s)).toMap
   }
 
   def generateInputs(out: ApdlPrintWriter): Unit = device.inputs.foreach { input =>
@@ -57,13 +58,13 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
         }
 
         // associate the args with the parameters name
-        implicit val namedArgs = zipArgWithIdentifier(input.args, parameters, List())
+        implicit val namedArgs = zipArgWithIdentifier(input.args, parameters, List()) + ("id" -> IdGenerator.nextVariable(input.identifier))
 
         out.printlnGlobal(gen.global.replaceWithArgs)
         out.printlnSetup(gen.setup.replaceWithArgs)
         out.printlnLoop(gen.loop.replaceWithArgs)
 
-        SymbolTable.add(input.identifier, Input(input.identifier, gen.expr.replaceWithArgs))
+        symbolTable.add(input.identifier, Input(input.identifier, gen.expr.replaceWithArgs))
 
       // Component
       case ApdlDefineComponent(name, parameters, inputs, outputType, gens) =>
@@ -72,18 +73,19 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
           case None => throw new ApdlCodeGenerationException(s"Unknow framework for define component $name")
         }
 
-        implicit val namedArgs = zipArgWithIdentifier(input.args, parameters, inputs.parameters)
+        // associate the args with the parameters name
+        implicit val namedArgs = zipArgWithIdentifier(input.args, parameters, inputs.parameters) + ("id" -> IdGenerator.nextVariable(input.identifier))
 
         out.printlnGlobal(gen.global.replaceWithArgs)
         out.printlnSetup(gen.setup.replaceWithArgs)
         out.printlnLoop(gen.loop.replaceWithArgs)
 
-        SymbolTable.add(input.identifier, Component(input.identifier, gen.expr.replaceWithArgs))
+        symbolTable.add(input.identifier, Component(input.identifier, gen.expr.replaceWithArgs))
 
       // Transform
       case ApdlDefineTransform(functionDecl) =>
         out.printFunction(transformCodeGen(functionDecl))
-        SymbolTable.add(functionDecl.header.identifier,
+        symbolTable.add(functionDecl.header.identifier,
           Transform(
             functionDecl.header.identifier, functionDecl.header.parameters.map(_.typ), functionDecl.header.resultType)
         )
@@ -106,7 +108,6 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
           inner(arguments.tail, acc.replace("@" + id, value))
         }
       }
-
       inner(args, string)
     }
   }

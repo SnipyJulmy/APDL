@@ -5,7 +5,7 @@ import apdl.parser.{TfRetTyp, TfTyp}
 
 import scala.collection.mutable
 
-object SymbolTable {
+class SymbolTable {
   // TODO refactoring, encapstulation,...
   val map: mutable.Map[String, SymbolTableElement] = mutable.Map()
 

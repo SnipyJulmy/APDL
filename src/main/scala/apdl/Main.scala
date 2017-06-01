@@ -1,6 +1,6 @@
 package apdl
 
-import apdl.generation.{ApdlProjectManager, ProjectGenerator, SymbolTable}
+import apdl.generation.{ApdlProjectManager, ProjectGenerator}
 
 import scala.io.Source
 
