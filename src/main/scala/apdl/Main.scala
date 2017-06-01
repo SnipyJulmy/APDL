@@ -1,9 +1,10 @@
 package apdl
 
-import apdl.generation.{ApdlProjectManager, ProjectGenerator}
+import apdl.generation.{ApdlProjectManager, ProjectGenerator, SymbolTable}
 
 import scala.io.Source
 
+import ApdlUtils._
 
 object Main extends App {
 
@@ -14,7 +15,7 @@ object Main extends App {
   val manager = new ApdlProjectManager(source)
   val generator = new ProjectGenerator(manager.project)
   generator.mkProject()
-
+  debug("End")
   /*
 
   def parse(args: Array[String]): ApdlConfig = {
