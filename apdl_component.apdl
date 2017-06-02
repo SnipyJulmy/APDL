@@ -29,8 +29,8 @@
 }
 
 @define component simpleOperator op:str {
-    @in x:num y:num
-    @out num
+    @in x:int y:int
+    @out int
     @gen mbed {
         global = ""
         setup = ""
