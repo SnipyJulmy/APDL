@@ -1,7 +1,7 @@
 package apdl.parser
 
 import apdl.parser.ApdlTimeUnit._
-import apdl.parser.ApdlType.{Id, Num, Str}
+import apdl.parser.ApdlType.{Bool, Byte, Char, Double, Float, Id, Int, Long, Short, Str}
 
 import Function.tupled
 
@@ -48,9 +48,16 @@ trait DslApdlBackendGenerators extends TransformApdlBackendGenerators {
   def toApdlCode(output: Output) : String = s"@out ${toApdlCode(output.outputType)}"
 
   def toApdlCode(outputType: ApdlType): String = outputType match {
-    case Num => "num"
     case Str => "str"
     case Id => "id"
+    case Int => "int"
+    case Float => "float"
+    case Long => "long"
+    case Bool => "bool"
+    case Double => "double"
+    case Short => "short"
+    case Char => "char"
+    case Byte => "byte"
   }
 
   def toApdlCode(gen: Gen): String =

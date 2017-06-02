@@ -53,8 +53,8 @@ class DefineTest extends ApdlFlatSpec {
   val t1: String =
     """
       |@define component simpleOperator op:str {
-      |    @in x:num y:num
-      |    @out num
+      |    @in x:int y:int
+      |    @out int
       |    @gen mbed {
       |        global = ""
       |        setup = ""
@@ -77,8 +77,8 @@ class DefineTest extends ApdlFlatSpec {
       case ApdlDefineComponent(name, parameters, inputs, outputType, gens) =>
         assert(name == "simpleOperator")
         assert(parameters == List(Parameter("op", ApdlType.Str)))
-        assert(inputs == Inputs(List(Parameter("x", ApdlType.Num), Parameter("y", ApdlType.Num))))
-        assert(outputType == Output(ApdlType.Num))
+        assert(inputs == Inputs(List(Parameter("x", ApdlType.Int), Parameter("y", ApdlType.Int))))
+        assert(outputType == Output(ApdlType.Int))
         assert(gens == Map(
           "mbed" -> Gen("", "", "", "@x @op @y"),
           "arduino" -> Gen("", "", "", "@x @op @y")
