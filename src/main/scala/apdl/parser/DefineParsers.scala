@@ -1,7 +1,7 @@
 package apdl.parser
 
 import apdl.ApdlCodeGenerationException
-import apdl.parser.ApdlType.{Id, Num, Str}
+import apdl.parser.ApdlType.{Id, Str}
 
 import scala.util.matching.Regex
 import scala.util.parsing.combinator.{PackratParsers, RegexParsers}
@@ -81,24 +81,35 @@ case class Parameter(id: String, typ: ApdlType)
 
 sealed trait ApdlType {
   override def toString: String = this match {
-    case Num => "num"
     case Str => "str"
     case Id => "id"
     case ApdlType.Int => "int"
+    case ApdlType.Float => "float"
+    case ApdlType.Double => "double"
+    case ApdlType.Long => "long"
+    case ApdlType.Byte => "byte"
+    case ApdlType.Short => "short"
+    case ApdlType.Bool => "bool"
+    case ApdlType.Char => "char"
   }
 }
 
 object ApdlType {
-  // any number : 0.47, 3, 13E14,...
-  case object Num extends ApdlType
   // any string : _AS)D SA)D,...
   case object Str extends ApdlType
   // any valid identifier : _id, asAdASDsa, id_ad_ASDS_ad
   case object Id extends ApdlType
   // standard types
   case object Int extends ApdlType
+  case object Float extends ApdlType
+  case object Long extends ApdlType
+  case object Bool extends ApdlType
+  case object Double extends ApdlType
+  case object Short extends ApdlType
+  case object Char extends ApdlType
+  case object Byte extends ApdlType
 
-  def values: Seq[ApdlType] = Seq(Num, Str, Id)
+  def values: Seq[ApdlType] = Seq(Str, Id, Int, Float, Long, Bool, Double, Short, Char, Byte)
 }
 
 object DefineUtils {
