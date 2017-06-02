@@ -70,20 +70,28 @@ abstract class ApdlPrintWriter(file: File) {
 }
 
 case class ApdlArduinoPrintWriter(file: File) extends ApdlPrintWriter(file) {
+  val generateTimer: Boolean = true
+  val generateSerial: Boolean = true
+
   override def close(): Unit = {
     pw.append {
       s"""
          |#include <stdbool.h>
+         |${if (generateTimer) s"""#include "Timer.h""""}
+         |
+         |${if (generateTimer) s"Timer t;"}
          |
          |${global.toString}
          |
          |${function.toString}
          |
          |void loop() {
+         |  ${if (generateTimer) s"t.update();"}
          |  ${loop.toString}
          |}
          |
          |void setup() {
+         |  ${if (generateSerial) s"Serial.begin(9600);"}
          |  ${setup.toString}
          |}
          |
@@ -122,7 +130,7 @@ case class ApdlMbedPrintWriter(file: File) extends ApdlPrintWriter(file) {
 }
 
 object ApdlPrintWriter {
-  def getPw(framework : ApdlFramework) : (File) => ApdlPrintWriter = framework match {
+  def getPw(framework: ApdlFramework): (File) => ApdlPrintWriter = framework match {
     case Arduino => ApdlArduinoPrintWriter.apply
     case Mbed => ApdlMbedPrintWriter.apply
   }
