@@ -6,7 +6,7 @@ import apdl.ApdlFramework.{Arduino, Mbed}
 import apdl.ApdlUtils._
 import apdl._
 import apdl.parser.DefineUtils._
-import apdl.parser._
+import apdl.parser.{ApdlType, _}
 
 import scala.Function._
 
@@ -101,20 +101,36 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
     println(input)
     input match {
       case _: Transform => throw new ApdlCodeGenerationException(s"Can't send ${serial.inputName} through serial, transform detected")
-      case Component(identifier, expr, component) =>
-      case Input(identifier, expr, inputDefine) =>
-        assume(inputDefine.isInstanceOf[ApdlDefineInput])
-        val define = inputDefine.asInstanceOf[ApdlDefineInput]
-        // Generate function to call periodicaly in order to send the input on the serial
-        // we assume that the input return an int... TODO --> Output type for defined input
+      case Component(identifier, expr, define) =>
+        assume(define.isInstanceOf[ApdlDefineComponent])
+        val component = define.asInstanceOf[ApdlDefineComponent]
+        // Generate the function which represent the component
         out.printlnFunction {
           s"""
-             |void serial_$identifier() {
+             | ${transformCodeGen(component.outputType.outputType)} component_$identifier (${component.inputs.parameters.map(p => s"${transformCodeGen(p.typ)} ${p.id}").mkString(",")}) {
+             |  return $expr;
+             | }
+           """.stripMargin
+        }
+      case Input(identifier, expr, inputDefine) =>
+        assume(inputDefine.isInstanceOf[ApdlDefineInput])
+        assume(serial.sampling.isInstanceOf[ApdlSamplingTimer])
+        val sampleValue = serial.sampling.asInstanceOf[ApdlSamplingTimer].ms
+        // Generate function to call periodicaly in order to send the input on the serial
+        // we assume that the input return an int... TODO --> Output type for defined input
+        val functionId = s"serial_$identifier"
+        out.printlnFunction {
+          s"""
+             |void  $functionId() {
              |  // Recover the data
              |  int data = $expr ;
              |  Serial.println(data);
              |}
            """.stripMargin
+        }
+        // Add to the timer
+        out.printlnSetup {
+          s"t.every($sampleValue,$functionId);"
         }
       case TransformedInput(identifier, tfIdentifier) =>
     }
@@ -252,5 +268,17 @@ class CLikeTransformCodeGenerator {
       case ArrayInitValue(values) => s"{${values map apply mkString ","}"
       case ArrayInitCapacity(capacity) => s"[${apply(capacity)}]"
     }
+  }
+
+  def apply(typ: ApdlType): String = typ match {
+    case ApdlType.Int => "int"
+    case ApdlType.Float => "float"
+    case ApdlType.Long => "long"
+    case ApdlType.Bool => "bool"
+    case ApdlType.Double => "double"
+    case ApdlType.Short => "short"
+    case ApdlType.Char => "char"
+    case ApdlType.Byte => "byte"
+    case _ => throw new ApdlCodeGenerationException(s"Unsupported ApdlType : $typ")
   }
 }
