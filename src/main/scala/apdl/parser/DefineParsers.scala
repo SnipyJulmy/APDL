@@ -46,11 +46,19 @@ class DefineParsers extends TransformDslParser with RegexParsers with PackratPar
     case (defId ~ defParams ~ defGens) => ApdlDefineInput(defId, defParams, defGens)
   }
 
-  lazy val apdlType: PackratParser[ApdlType] = num | str | id | apdlTypeInt
-  lazy val num: PackratParser[ApdlType.Num.type] = "num" ^^^ ApdlType.Num
+  lazy val apdlType: PackratParser[ApdlType] = str | id | apdlStdType
   lazy val str: PackratParser[ApdlType.Str.type] = "str" ^^^ ApdlType.Str
   lazy val id: PackratParser[ApdlType.Id.type] = "id" ^^^ ApdlType.Id
-  lazy val apdlTypeInt: PackratParser[ApdlType.Int.type] = "int" ^^^ ApdlType.Int
+  lazy val apdlStdType: PackratParser[ApdlType] = {
+    "int" ^^^ ApdlType.Int |
+      "float" ^^^ ApdlType.Float |
+      "double" ^^^ ApdlType.Double |
+      "char" ^^^ ApdlType.Char |
+      "byte" ^^^ ApdlType.Byte |
+      "short" ^^^ ApdlType.Short |
+      "bool" ^^^ ApdlType.Bool |
+      "long" ^^^ ApdlType.Long
+  }
 
   lazy val parameters: PackratParser[List[Parameter]] = rep(parameter)
   lazy val parameter: PackratParser[Parameter] = identifier ~ (":" ~> apdlType) ^^ { case (i ~ t) => Parameter(i, t) }
