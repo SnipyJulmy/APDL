@@ -1,7 +1,7 @@
 package apdl.generation
 
 import apdl.ApdlCodeGenerationException
-import apdl.parser.{TfRetTyp, TfTyp}
+import apdl.parser._
 
 import scala.collection.mutable
 
@@ -24,10 +24,12 @@ class SymbolTable {
     }
   }
 
-  def contains(symbol: String) : Boolean = map.contains(symbol)
+  def contains(symbol: String): Boolean = map.contains(symbol)
 }
 
 sealed trait SymbolTableElement
-case class Transform(identifier: String, parameters: List[TfTyp], resultType: TfRetTyp) extends SymbolTableElement
-case class Component(identifier: String, expr: String) extends SymbolTableElement
-case class Input(identifier: String, expr: String) extends SymbolTableElement
+
+case class Component(identifier : String, expr: String, component: ApdlDefine) extends SymbolTableElement
+case class Transform(functionDecl: FunctionDecl) extends SymbolTableElement
+case class TransformedInput(identifier : String, tfIdentifier: String) extends SymbolTableElement
+case class Input(identifier : String, expr: String, definition : ApdlDefine) extends SymbolTableElement
