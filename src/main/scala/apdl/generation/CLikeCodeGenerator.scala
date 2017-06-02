@@ -2,6 +2,7 @@ package apdl.generation
 
 import java.io.File
 
+import apdl.ApdlFramework.{Arduino, Mbed}
 import apdl.ApdlUtils._
 import apdl._
 import apdl.parser.DefineUtils._
@@ -66,7 +67,7 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
         out.printlnSetup(gen.setup.replaceWithArgs)
         out.printlnLoop(gen.loop.replaceWithArgs)
 
-        symbolTable.add(input.identifier, Input(input.identifier, gen.expr.replaceWithArgs))
+        symbolTable.add(input.identifier, Input(input.identifier, gen.expr.replaceWithArgs, definition))
 
       // Component
       case ApdlDefineComponent(name, parameters, inputs, outputType, gens) =>
@@ -82,23 +83,57 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
         out.printlnSetup(gen.setup.replaceWithArgs)
         out.printlnLoop(gen.loop.replaceWithArgs)
 
-        symbolTable.add(input.identifier, Component(input.identifier, gen.expr.replaceWithArgs))
+        symbolTable.add(input.identifier, Component(input.identifier, gen.expr.replaceWithArgs, definition))
 
       // Transform
       case ApdlDefineTransform(functionDecl) =>
         // Generate code for function, only once !
         if (!symbolTable.contains(functionDecl.header.identifier)) {
           out.printFunction(transformCodeGen(functionDecl))
-          symbolTable.add(functionDecl.header.identifier,
-            Transform(
-              functionDecl.header.identifier, functionDecl.header.parameters.map(_.typ), functionDecl.header.resultType)
-          )
+          symbolTable.add(functionDecl.header.identifier, Transform(functionDecl))
         }
+        symbolTable.add(input.identifier, TransformedInput(input.identifier, functionDecl.header.identifier))
     }
   }
 
-  def generateSerials(out: ApdlPrintWriter): Unit = {
+  def generateArduinoSerials(out: ApdlPrintWriter): Unit = device.serials.foreach { serial =>
+    val input = symbolTable.get(serial.inputName)
+    println(input)
+    input match {
+      case _: Transform => throw new ApdlCodeGenerationException(s"Can't send ${serial.inputName} through serial, transform detected")
+      case Component(identifier, expr, component) =>
+      case Input(identifier, expr, inputDefine) =>
+        assume(inputDefine.isInstanceOf[ApdlDefineInput])
+        val define = inputDefine.asInstanceOf[ApdlDefineInput]
+        // Generate function to call periodicaly in order to send the input on the serial
+        // we assume that the input return an int... TODO --> Output type for defined input
+        out.printlnFunction {
+          s"""
+             |void serial_$identifier() {
+             |  // Recover the data
+             |  int data = $expr ;
+             |  Serial.println(data);
+             |}
+           """.stripMargin
+        }
+      case TransformedInput(identifier, tfIdentifier) =>
+    }
+  }
 
+  // TODO
+  def generateMbedSerials(out: ApdlPrintWriter): Unit = device.serials.foreach { serial =>
+    val input = symbolTable.get(serial.inputName)
+    input match {
+      case _: Transform => throw new ApdlCodeGenerationException(s"Can't send ${serial.inputName} through serial, transform detected")
+      case Component(identifier, expr, component) =>
+      case Input(identifier, expr, inputDefine) =>
+      case TransformedInput(identifier, tfIdentifier) =>
+    }
+  }
+
+  def generateSerials(out: ApdlPrintWriter): Unit = framework match {
+    case Arduino => generateArduinoSerials(out)
+    case Mbed => generateMbedSerials(out)
   }
 
   implicit class ApdlScriptString(string: String) {
@@ -111,6 +146,7 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
           inner(arguments.tail, acc.replace("@" + id, value))
         }
       }
+
       inner(args, string)
     }
   }
