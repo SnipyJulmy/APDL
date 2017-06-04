@@ -67,52 +67,78 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
       }
   }
 
-  def generateInputs(out: ApdlPrintWriter): Unit = device.inputs.foreach { input => input match {
-    case ApdlInputDefault(identifier, defineInputIdentifier, args) =>
-      val defineInput = defines
-        .find(d => d.isInstanceOf[ApdlDefineInput] && d.identifier == defineInputIdentifier)
-        .getOrElse(throw new ApdlProjectException(s"Unknow defined input $defineInputIdentifier"))
-        .asInstanceOf[ApdlDefineInput]
+  def generateInputs(out: ApdlPrintWriter): Unit = device.inputs.foreach { input =>
+    input match {
+      case ApdlInputDefault(identifier, defineInputIdentifier, args) =>
+        val defineInput = defines
+          .find(d => d.isInstanceOf[ApdlDefineInput] && d.identifier == defineInputIdentifier)
+          .getOrElse(throw new ApdlProjectException(s"Unknow defined input $defineInputIdentifier"))
+          .asInstanceOf[ApdlDefineInput]
 
-      implicit val arg: Map[String, String] = zipArgWithIdentifier(args, defineInput.parameters, List()) + ("id" -> IdGenerator.nextVariable(identifier))
+        implicit val arg: Map[String, String] = zipArgWithIdentifier(args, defineInput.parameters, List()) + ("id" -> IdGenerator.nextVariable(identifier))
 
-      val gen = defineInput.gens.getOrElse(framework.identifier, throw new ApdlProjectException(s"Unknow framework $framework for device ${device.name}"))
+        val gen = defineInput.gens.getOrElse(framework.identifier, throw new ApdlProjectException(s"Unknow framework $framework for device ${device.name}"))
+        out.printlnLoop(gen.loop.replaceWithArgs.removeApdlSymbol())
+        out.printlnSetup(gen.setup.replaceWithArgs.removeApdlSymbol())
+        out.printlnGlobal(gen.global.replaceWithArgs.removeApdlSymbol())
+
+        symbolTable.add(identifier, DefaultInput(identifier, gen.expr.replaceWithArgs))
+
+      case ApdlInputTransformed(identifier, defineInputName, args, transformIdentifier) =>
+      case ApdlInputComponent(identifier, defineInputIdentifier, args, componentIdentifier) =>
+      /*
+      val component = defines
+        .find(d => d.isInstanceOf[ApdlDefineComponent] && d.identifier == componentIdentifier)
+        .getOrElse(throw new ApdlProjectException(s"Unknow defined component $componentIdentifier"))
+        .asInstanceOf[ApdlDefineComponent]
+
+      implicit val arg: Map[String, String] = componentSymbols(args, component.parameters, component.inputs.parameters)
+
+      val gen = component.gens.getOrElse(framework.identifier, throw new ApdlProjectException(s"Unknow framework $framework for device ${device.name}"))
       out.printlnLoop(gen.loop.replaceWithArgs.removeApdlSymbol())
       out.printlnSetup(gen.setup.replaceWithArgs.removeApdlSymbol())
       out.printlnGlobal(gen.global.replaceWithArgs.removeApdlSymbol())
-
-      symbolTable.add(identifier,DefaultInput(identifier,gen.expr.replaceWithArgs))
-
-    case ApdlInputTransformed(identifier, defineInputName, args, transformIdentifier) =>
-    case ApdlInputComponent(identifier, defineInputIdentifier, args, componentIdentifier) =>
-    /*
-    val component = defines
-      .find(d => d.isInstanceOf[ApdlDefineComponent] && d.identifier == componentIdentifier)
-      .getOrElse(throw new ApdlProjectException(s"Unknow defined component $componentIdentifier"))
-      .asInstanceOf[ApdlDefineComponent]
-
-    implicit val arg: Map[String, String] = componentSymbols(args, component.parameters, component.inputs.parameters)
-
-    val gen = component.gens.getOrElse(framework.identifier, throw new ApdlProjectException(s"Unknow framework $framework for device ${device.name}"))
-    out.printlnLoop(gen.loop.replaceWithArgs.removeApdlSymbol())
-    out.printlnSetup(gen.setup.replaceWithArgs.removeApdlSymbol())
-    out.printlnGlobal(gen.global.replaceWithArgs.removeApdlSymbol())
-    // A component could be seen as a function
-    out.printlnFunction {
-      s"""
-         | ${transformCodeGen(component.outputType.outputType)} component_${component.name}_$identifier
-          (${component.inputs.parameters.map(p => s"${transformCodeGen(p.typ)} ${p.id}").mkString(",")}) {
-         | return ${gen.expr.replaceWithArgs.removeApdlSymbol()} ;
-         | }
-       """.stripMargin
+      // A component could be seen as a function
+      out.printlnFunction {
+        s"""
+           | ${transformCodeGen(component.outputType.outputType)} component_${component.name}_$identifier
+            (${component.inputs.parameters.map(p => s"${transformCodeGen(p.typ)} ${p.id}").mkString(",")}) {
+           | return ${gen.expr.replaceWithArgs.removeApdlSymbol()} ;
+           | }
+         """.stripMargin
+      }
+      symbolTable.add(identifier,Input(identifier,gen.expr.replaceWithArgs,ApdlInputComponent(identifier, defineInputIdentifier, args, componentIdentifier),component))
+      symbolTable.add(component.name, Component(component.name, component.outputType.outputType, component.parameters))
+      */
     }
-    symbolTable.add(identifier,Input(identifier,gen.expr.replaceWithArgs,ApdlInputComponent(identifier, defineInputIdentifier, args, componentIdentifier),component))
-    symbolTable.add(component.name, Component(component.name, component.outputType.outputType, component.parameters))
-    */
-  }}
+  }
 
-  def generateArduinoSerials(out: ApdlPrintWriter): Unit = {
-    // TODO
+  def generateArduinoSerials(out: ApdlPrintWriter): Unit = device.serials.foreach { serial =>
+    if (symbolTable.contains(serial.inputName)) {
+      val input = symbolTable.get(serial.inputName)
+      input match {
+        case DefaultInput(identifier, expr) =>
+          // Generate function for callback
+          val functionIdentifier = s"serial_$identifier"
+          val sampleValue = serial.sampling.asInstanceOf[ApdlSamplingTimer].ms
+          out.printlnFunction {
+            s"""
+               |void $functionIdentifier() {
+               |  // Get the data
+               |  int data = $expr;
+               |  // Send data
+               |  Serial.println(data);
+               |}
+           """.
+              stripMargin
+          }
+          // Call the function with timer
+          out.printlnSetup {
+            s"t.every($sampleValue,$functionIdentifier);"
+          }
+        case _ =>
+      }
+    }
   }
 
   /*device.serials.foreach { serial =>
