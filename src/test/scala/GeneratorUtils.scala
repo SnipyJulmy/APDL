@@ -439,12 +439,12 @@ class ApdlProjectGenerators(maxExprSize: Int = 4, maxBlockSize: Int = 10, maxGen
     } yield (_1, _2))
   } yield ApdlDevice(name, id, framework, inputs, serials, params.toMap)
 
-  def genInput: Gen[ApdlInput] = for {
+  def genInput: Gen[ApdlInputDefault] = for {
     l <- Gen.choose(0,maxGeneralListSize)
     id <- genIdentifier
     inputName <- genIdentifier
     params <- Gen.listOfN(l,genParameter.map(p => p.id))
-  } yield ApdlInput(id, inputName, params)
+  } yield ApdlInputDefault(id, inputName, params)
 
   def genSerial: Gen[ApdlSerial] = for {
     name <- genIdentifier

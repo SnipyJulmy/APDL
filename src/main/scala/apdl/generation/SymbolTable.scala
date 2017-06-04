@@ -29,7 +29,7 @@ class SymbolTable {
 
 sealed trait SymbolTableElement
 
-case class Component(identifier : String, expr: String, component: ApdlDefine) extends SymbolTableElement
+case class Component(identifier: String, outputType: ApdlType, parameters: List[Parameter]) extends SymbolTableElement
 case class Transform(functionDecl: FunctionDecl) extends SymbolTableElement
-case class TransformedInput(identifier : String, tfIdentifier: String) extends SymbolTableElement
-case class Input(identifier : String, expr: String, definition : ApdlDefine) extends SymbolTableElement
+case class TransformedInput(identifier: String, inputIdentifier: String, functionDecl: FunctionDecl, inputDefine: ApdlDefine) extends SymbolTableElement
+case class Input(identifier: String, expr: String, defineInput: ApdlDefineInput) extends SymbolTableElement
