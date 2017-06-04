@@ -3,7 +3,7 @@ package apdl.parser
 import apdl.parser.ApdlTimeUnit._
 import apdl.parser.ApdlType.{Bool, Byte, Char, Double, Float, Id, Int, Long, Short, Str}
 
-import Function.tupled
+import scala.Function.tupled
 
 /**
   * An code generators which target the apdl language itself
@@ -43,9 +43,9 @@ trait DslApdlBackendGenerators extends TransformApdlBackendGenerators {
      """.stripMargin
   }
 
-  def toApdlCode(inputs: Inputs) : String = s"@in ${toApdlCode(inputs.parameters)}"
+  def toApdlCode(inputs: Inputs): String = s"@in ${toApdlCode(inputs.parameters)}"
 
-  def toApdlCode(output: Output) : String = s"@out ${toApdlCode(output.outputType)}"
+  def toApdlCode(output: Output): String = s"@out ${toApdlCode(output.outputType)}"
 
   def toApdlCode(outputType: ApdlType): String = outputType match {
     case Str => "str"
@@ -85,11 +85,18 @@ trait DslApdlBackendGenerators extends TransformApdlBackendGenerators {
        |  framework = ${device.framework}
        |  ${device.inputs map toApdlCode mkString "\n"}
        |  ${device.serials map toApdlCode mkString "\n"}
-       |  ${device.additionalParameters map tupled ((k ,v ) => s"$k = $v") mkString "\n"}
+       |  ${device.additionalParameters map tupled((k, v) => s"$k = $v") mkString "\n"}
        |}
      """.stripMargin
 
-  def toApdlCode(input: ApdlInput): String = s"@input ${input.identifier} ${input.defineInputName} ${input.args mkString " "}"
+  def toApdlCode(input: ApdlInput): String = input match {
+    case ApdlInputDefault(identifier, defineInputName, args) =>
+      s"@input $identifier $defineInputName ${args mkString " "}"
+    case ApdlInputTransformed(identifier, defineInputName, args, _) =>
+      s"@input $identifier $defineInputName ${args mkString " "}"
+    case ApdlInputComponent(identifier, defineInputName, args, _) =>
+      s"@input $identifier $defineInputName ${args mkString " "}"
+  }
 
   def toApdlCode(serial: ApdlSerial): String = s"@serial ${serial.inputName} ${toApdlCode(serial.sampling)}"
 
