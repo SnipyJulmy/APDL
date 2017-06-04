@@ -5,7 +5,6 @@ import java.io.File
 import apdl.ApdlFramework.{Arduino, Mbed}
 import apdl.ApdlUtils._
 import apdl._
-import apdl.parser.DefineUtils._
 import apdl.parser.{ApdlType, _}
 
 import scala.Function._
@@ -27,6 +26,8 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
       throw new ApdlDirectoryException(s"Can't create file ${mainFile.getAbsolutePath}")
     debug(s"create file ${mainFile.getAbsolutePath}")
     val mainPw = ApdlPrintWriter.getPw(framework)(mainFile)
+    debug(s"Generate definition for device ${device.name}")
+    generateDefinitions(mainPw)
     debug(s"Generate inputs for device ${device.name}")
     generateInputs(mainPw)
     debug(s"Generate serials for device ${device.name}")
@@ -40,63 +41,79 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
     case _ => throw new ApdlCodeGenerationException(s"Unknow framework : $framework")
   }
 
+  def componentSymbols(args: List[String], defineParameters: List[Parameter], inputs: List[Parameter]): Map[String, String] = {
+    val params = defineParameters.map(_.id) ::: inputs.map(i => transformCodeGen(i.typ))
+    require(args.length == params.length, s"parameter size and arguments size are not the same : ${args.length} != ${params.length}")
+    ((args zip params) map tupled((s, p) => p -> s)).toMap
+  }
+
   def zipArgWithIdentifier(args: List[String], defineParameters: List[Parameter], inputsParameters: List[Parameter]): Map[String, String] = {
     val params = defineParameters ::: inputsParameters
     require(args.length == params.length, s"parameter size and arguments size are not the same : ${args.length} != ${params.length}")
     ((args zip params) map tupled((s, p) => p.id -> s)).toMap
   }
 
-  def generateInputs(out: ApdlPrintWriter): Unit = device.inputs.foreach { input =>
-
-    // Find the define component (like the type of the input)
-    val definition = defines.defineFromString(input.defineInputName)
-
-    definition match {
-
-      // Input
-      case ApdlDefineInput(name, parameters, gens) =>
-        val gen = gens.get(device.framework) match {
-          case Some(value) => value
-          case None => throw new ApdlCodeGenerationException(s"Unknow framework for define inputs $name")
-        }
-
-        // associate the args with the parameters name
-        implicit val namedArgs = zipArgWithIdentifier(input.args, parameters, List()) + ("id" -> IdGenerator.nextVariable(input.identifier))
-
-        out.printlnGlobal(gen.global.replaceWithArgs)
-        out.printlnSetup(gen.setup.replaceWithArgs)
-        out.printlnLoop(gen.loop.replaceWithArgs)
-
-        symbolTable.add(input.identifier, Input(input.identifier, gen.expr.replaceWithArgs, definition))
-
-      // Component
-      case ApdlDefineComponent(name, parameters, inputs, outputType, gens) =>
-        val gen = gens.get(device.framework) match {
-          case Some(value) => value
-          case None => throw new ApdlCodeGenerationException(s"Unknow framework for define component $name")
-        }
-
-        // associate the args with the parameters name
-        implicit val namedArgs = zipArgWithIdentifier(input.args, parameters, inputs.parameters) + ("id" -> IdGenerator.nextVariable(input.identifier))
-
-        out.printlnGlobal(gen.global.replaceWithArgs)
-        out.printlnSetup(gen.setup.replaceWithArgs)
-        out.printlnLoop(gen.loop.replaceWithArgs)
-
-        symbolTable.add(input.identifier, Component(input.identifier, gen.expr.replaceWithArgs, definition))
-
-      // Transform
-      case ApdlDefineTransform(functionDecl) =>
-        // Generate code for function, only once !
-        if (!symbolTable.contains(functionDecl.header.identifier)) {
-          out.printFunction(transformCodeGen(functionDecl))
-          symbolTable.add(functionDecl.header.identifier, Transform(functionDecl))
-        }
-        symbolTable.add(input.identifier, TransformedInput(input.identifier, functionDecl.header.identifier))
-    }
+  // Generate the definition, kind of the data structure of the project
+  def generateDefinitions(out: ApdlPrintWriter): Unit = defines.foreach {
+    case _: ApdlDefineInput =>
+    // Can't generate define input at this moment
+    case _: ApdlDefineComponent =>
+    // Can't generate component at this moment
+    case ApdlDefineTransform(functionDecl) =>
+      if (!symbolTable.contains(functionDecl.header.identifier)) {
+        // A transform is a function
+        out.printFunction(transformCodeGen(functionDecl))
+        symbolTable.add(functionDecl.header.identifier, Transform(functionDecl))
+      }
   }
 
-  def generateArduinoSerials(out: ApdlPrintWriter): Unit = device.serials.foreach { serial =>
+  def generateInputs(out: ApdlPrintWriter): Unit = device.inputs.foreach {
+    case ApdlInputDefault(identifier, defineInputIdentifier, args) =>
+      val defineInput = defines
+        .find(d => d.isInstanceOf[ApdlDefineInput] && d.identifier == defineInputIdentifier)
+        .getOrElse(throw new ApdlProjectException(s"Unknow defined input $defineInputIdentifier"))
+        .asInstanceOf[ApdlDefineInput]
+
+      implicit val arg: Map[String, String] = zipArgWithIdentifier(args, defineInput.parameters, List())
+
+      val gen = defineInput.gens.getOrElse(framework.identifier, throw new ApdlProjectException(s"Unknow framework $framework for device ${device.name}"))
+      out.printlnLoop(gen.loop.replaceWithArgs.removeApdlSymbol())
+      out.printlnSetup(gen.setup.replaceWithArgs.removeApdlSymbol())
+      out.printlnGlobal(gen.global.replaceWithArgs.removeApdlSymbol())
+
+      symbolTable.add(identifier, Input(identifier, gen.expr.replaceWithArgs, defineInput))
+
+    case ApdlInputTransformed(identifier, defineInputName, args, transformIdentifier) =>
+    case ApdlInputComponent(identifier, defineInputName, args, componentIdentifier) =>
+      val component = defines
+        .find(d => d.isInstanceOf[ApdlDefineComponent] && d.identifier == componentIdentifier)
+        .getOrElse(throw new ApdlProjectException(s"Unknow defined component $componentIdentifier"))
+        .asInstanceOf[ApdlDefineComponent]
+
+      implicit val arg: Map[String, String] = componentSymbols(args, component.parameters, component.inputs.parameters)
+
+      val gen = component.gens.getOrElse(framework.identifier, throw new ApdlProjectException(s"Unknow framework $framework for device ${device.name}"))
+      out.printlnLoop(gen.loop.replaceWithArgs.removeApdlSymbol())
+      out.printlnSetup(gen.setup.replaceWithArgs.removeApdlSymbol())
+      out.printlnGlobal(gen.global.replaceWithArgs.removeApdlSymbol())
+      // A component could be seen as a function
+      out.printlnFunction {
+        s"""
+           | ${transformCodeGen(component.outputType.outputType)} component_${component.name}_${identifier}
+            (${component.inputs.parameters.map(p => s"${transformCodeGen(p.typ)} ${p.id}").mkString(",")}) {
+           | return ${gen.expr.replaceWithArgs.removeApdlSymbol()} ;
+           | }
+         """.stripMargin
+      }
+
+      symbolTable.add(component.name, Component(component.name, component.outputType.outputType, component.parameters))
+  }
+
+  def generateArduinoSerials(out: ApdlPrintWriter): Unit = {
+    // TODO
+  }
+
+  /*device.serials.foreach { serial =>
     val input = symbolTable.get(serial.inputName)
     println(input)
     input match {
@@ -132,19 +149,28 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
         out.printlnSetup {
           s"t.every($sampleValue,$functionId);"
         }
-      case TransformedInput(identifier, tfIdentifier) =>
+      case TransformedInput(identifier, inputName, functionDecl, inputDefine) =>
+        assume(serial.sampling.isInstanceOf[ApdlSamplingTimer])
+        // Same as input but we call the transform function before sending
+        val sampleValue = serial.sampling.asInstanceOf[ApdlSamplingTimer].ms
+        val functionId = s"serial_$identifier"
+        out.printlnFunction {
+          s"""
+             |void  $functionId() {
+             |  // Recover the data
+             |}
+           """.stripMargin
+        }
+        // Add to the timer
+        out.printlnSetup {
+          s"t.every($sampleValue,$functionId);"
+        }
     }
   }
+  */
 
-  // TODO
-  def generateMbedSerials(out: ApdlPrintWriter): Unit = device.serials.foreach { serial =>
-    val input = symbolTable.get(serial.inputName)
-    input match {
-      case _: Transform => throw new ApdlCodeGenerationException(s"Can't send ${serial.inputName} through serial, transform detected")
-      case Component(identifier, expr, component) =>
-      case Input(identifier, expr, inputDefine) =>
-      case TransformedInput(identifier, tfIdentifier) =>
-    }
+  def generateMbedSerials(out: ApdlPrintWriter): Unit = {
+    /*TODO*/
   }
 
   def generateSerials(out: ApdlPrintWriter): Unit = framework match {
@@ -164,6 +190,10 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
       }
 
       inner(args, string)
+    }
+
+    def removeApdlSymbol(symbol: String = "@"): String = {
+      string.replaceAll("@", "")
     }
   }
 }
