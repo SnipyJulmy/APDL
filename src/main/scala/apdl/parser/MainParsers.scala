@@ -1,6 +1,6 @@
 package apdl.parser
 
-import apdl.{ApdlParserException, ApdlProjectException}
+import apdl.ApdlParserException
 
 import scala.Function.tupled
 import scala.util.matching.Regex
@@ -47,8 +47,8 @@ class MainParsers extends DefineParsers {
 
   def keyValue: Parser[(String, String)] = identifier ~ "=" ~ identifier ^^ { case (k ~ _ ~ v) => (k, v) }
 
-  def apdlInput: Parser[ApdlInputDefault] = "@input" ~> identifier ~ identifier ~ apdlParameters ^^ {
-    case (name ~ typ ~ params) => ApdlInputDefault(name, typ, params)
+  def apdlInput: Parser[ApdlInput] = "@input" ~> identifier ~ identifier ~ apdlParameters ^^ {
+    case (name ~ typ ~ params) => ApdlInput(name, typ, params)
   }
 
   def apdlParameters: Parser[List[String]] = rep(apdlParameter)
@@ -77,7 +77,7 @@ class MainParsers extends DefineParsers {
   def apdlDevice: Parser[ApdlDevice] = {
 
     def process(ident: String, xs: List[Object]): ApdlDevice = {
-      val inputs = xs.filter(_.isInstanceOf[ApdlInputDefault]).map(_.asInstanceOf[ApdlInputDefault])
+      val inputs = xs.filter(_.isInstanceOf[ApdlInput]).map(_.asInstanceOf[ApdlInput])
       val serials = xs.filter(_.isInstanceOf[ApdlSerial]).map(_.asInstanceOf[ApdlSerial])
       val keyValues = xs.filter(_.isInstanceOf[(String, String)]).map(_.asInstanceOf[(String, String)])
       val framework = (keyValues find tupled((k, _) => k == "framework")).getOrElse(throw new ApdlParserException(s"No framework specify for $ident"))._2
@@ -96,40 +96,12 @@ case class ApdlProject(
                         defineInputs: List[ApdlDefineInput],
                         defineComponents: List[ApdlDefineComponent],
                         defineTransforms: List[ApdlDefineTransform]
-                      ) {
-  val defines: List[ApdlDefine] = defineInputs ::: defineComponents ::: defineTransforms
-  def solveInputTypes: ApdlProject = {
-    val newDevices = devices.map { d =>
-      val inputs : List[ApdlInput] = d.inputs.map {
-        case ApdlInputDefault(identifier, defineInputName, args) =>
-          assume(args.nonEmpty)
-          defines.find(_.identifier == defineInputName) match {
-            case Some(value) => value match {
-              case ApdlDefineInput(id, _, _) =>
-                ApdlInputDefault(identifier,defineInputName,args)
-                //throw new ApdlProjectException(s"Unexpected input detected : device : ${d.name}, input : $identifier -> $id")
-              case component: ApdlDefineComponent =>
-                ApdlInputComponent(identifier,defineInputName,args,component.name)
-              case ApdlDefineTransform(functionDecl) =>
-                ApdlInputTransformed(identifier,defineInputName,args,functionDecl.header.identifier)
-            }
-            case None => ApdlInputDefault(identifier,defineInputName,args)
-          }
-        case other => other
-      }
-      d.copy(inputs = inputs)
-    }
-    ApdlProject(name, newDevices, defineInputs, defineComponents, defineTransforms)
-  }
-}
+                      )
 
 case class ApdlDevice(name: String, id: String, framework: String, inputs: List[ApdlInput], serials: List[ApdlSerial], additionalParameters: Map[String, String])
-sealed trait ApdlInput {
-  val identifier: String
-}
-case class ApdlInputDefault(identifier: String, defineInputIdentifier: String, args: List[String]) extends ApdlInput
-case class ApdlInputTransformed(identifier: String, defineInputIdentifier: String, args: List[String], transformIdentifier: String) extends ApdlInput
-case class ApdlInputComponent(identifier: String, defineInputIdentifier: String, args: List[String], componentIdentifier: String) extends ApdlInput
+
+case class ApdlInput(identifier: String, defineInputIdentifier: String, args: List[String])
+
 case class ApdlSerial(inputName: String, sampling: ApdlSampling)
 
 sealed trait ApdlSampling
