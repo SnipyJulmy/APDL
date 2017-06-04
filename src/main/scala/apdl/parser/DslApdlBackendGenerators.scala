@@ -89,14 +89,8 @@ trait DslApdlBackendGenerators extends TransformApdlBackendGenerators {
        |}
      """.stripMargin
 
-  def toApdlCode(input: ApdlInput): String = input match {
-    case ApdlInputDefault(identifier, defineInputName, args) =>
-      s"@input $identifier $defineInputName ${args mkString " "}"
-    case ApdlInputTransformed(identifier, defineInputName, args, _) =>
-      s"@input $identifier $defineInputName ${args mkString " "}"
-    case ApdlInputComponent(identifier, defineInputName, args, _) =>
-      s"@input $identifier $defineInputName ${args mkString " "}"
-  }
+  def toApdlCode(input: ApdlInput): String =
+    s"@input ${input.identifier} ${input.defineInputIdentifier} ${input.args mkString " "}"
 
   def toApdlCode(serial: ApdlSerial): String = s"@serial ${serial.inputName} ${toApdlCode(serial.sampling)}"
 
