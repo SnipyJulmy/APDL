@@ -16,7 +16,7 @@ class ApdlProjectManager(val source: String) {
   private val processSource = includeProcessor.process(source)
   def project: ApdlProject = mainParsers.parse(mainParsers.program, new PackratReader[Char](new CharSequenceReader(processSource))) match {
     case Success(result, _) =>
-      result.solveInputTypes
+      result
     case n: NoSuccess =>
       throw new ApdlParserException(s"$n")
   }
