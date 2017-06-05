@@ -23,6 +23,14 @@ class SymbolTable {
     }
   }
 
+  def getsOption(symbols: List[String]): List[Option[SymbolTableElement]] = {
+    symbols.map(s => getOption(s))
+  }
+
+  def gets(symbols: List[String]): List[SymbolTableElement] = {
+    symbols.map(s => getOption(s).getOrElse(throw new ApdlCodeGenerationException(s"Unknow symbol $s")))
+  }
+
   def contains(symbol: String): Boolean = map.contains(symbol)
 }
 
@@ -32,6 +40,6 @@ case class Component(identifier: String, outputType: ApdlType, parameters: List[
 case class Transform(functionDecl: FunctionDecl) extends SymbolTableElement
 
 sealed trait Input extends SymbolTableElement
-case class InputDefault(identifier: String, definition : ApdlDefineInput, args : List[String], expr : String) extends Input
-case class InputTransformed(identifier: String, definition: ApdlDefineTransform, input : Input) extends Input
-case class InputComponented(identifier: String, definition : ApdlDefineComponent, inputs : List[Input]) extends Input
+case class InputDefault(identifier: String, definition: ApdlDefineInput, args: List[String], expr: String) extends Input
+case class InputTransformed(identifier: String, definition: ApdlDefineTransform, input: Input) extends Input
+case class InputComponented(identifier: String, definition: ApdlDefineComponent, inputs: List[Input]) extends Input
