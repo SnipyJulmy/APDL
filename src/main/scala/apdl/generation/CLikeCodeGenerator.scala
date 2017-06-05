@@ -69,6 +69,97 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
 
   def generateInputs(out: ApdlPrintWriter): Unit = {
     // Generate default input
+    generateDefaultInputs(out)
+    // Make the symbolTable for non-default input
+    generateNonDefaultInputs(out)
+  }
+
+  def generateNonDefaultInputs(out: ApdlPrintWriter): Unit = {
+    val inputs = device.inputs
+    val nonDefaultInputs = inputs.filter(isNonDefault)
+
+    // For each inputs, take the ones who are generable
+    def process(inputs: List[ApdlInput]): Unit = if (inputs.nonEmpty) {
+      val (generableInputs, nonGenerableInputs) = inputs.partition(isGenerable)
+      generableInputs.foreach { i =>
+        // TODO put into symbol table
+        if (isTransform(i)) {
+          val sourceInput = symbolTable.get(i.args.head) match {
+            case default: InputDefault => default
+            case transformed: InputTransformed => transformed
+            case componented: InputComponented => componented
+            case _ => throw new ApdlProjectException(s"Can't find source input for input ${i.identifier}")
+          }
+          val definition = defines.find(_.identifier == i.defineInputIdentifier) match {
+            case Some(value) => value
+            case None => throw new ApdlProjectException(s"Unknow define for input ${i.identifier}")
+          }
+          assume(definition.isInstanceOf[ApdlDefineTransform])
+          symbolTable.add(i.identifier, InputTransformed(i.identifier, definition.asInstanceOf[ApdlDefineTransform], sourceInput))
+        }
+        if(isComponented(i)) {
+          println(s"Componented input")
+        }
+      }
+      process(nonGenerableInputs)
+    }
+
+    process(nonDefaultInputs)
+  }
+
+  def isTransform(input: ApdlInput): Boolean = {
+    defines.find {
+      case ApdlDefineTransform(functionDecl) => functionDecl.header.identifier == input.defineInputIdentifier
+      case _ => false
+    } match {
+      case Some(value) =>
+        assert(value.isInstanceOf[ApdlDefineTransform])
+        assert(input.args.length == 1)
+        true
+      case None => false
+    }
+  }
+
+  def isComponented(input: ApdlInput): Boolean = {
+    defines.find {
+      case component: ApdlDefineComponent => component.identifier == input.defineInputIdentifier
+      case _ => false
+    } match {
+      case Some(value) =>
+        assert(value.isInstanceOf[ApdlDefineComponent])
+        true
+      case None => false
+    }
+  }
+
+  def isGenerable(input: ApdlInput): Boolean = {
+    if (isTransform(input)) {
+      assert(input.args.length == 1)
+      val sourceInput = input.args.head
+      symbolTable.contains(sourceInput)
+    }
+    else if (isComponented(input)) {
+      input.args.forall(symbolTable.contains)
+    }
+    else {
+      throw new ApdlProjectException(s"Wrong input type for input ${input.identifier} from device ${device.name}")
+    }
+  }
+
+  def isNonDefault(input: ApdlInput): Boolean = {
+    !isDefault(input)
+  }
+
+  def isDefault(input: ApdlInput): Boolean = {
+    defines.find(_.identifier == input.defineInputIdentifier) match {
+      case Some(definition) => definition match {
+        case _: ApdlDefineInput => true
+        case _: ApdlDefineComponent => false
+        case _: ApdlDefineTransform => false
+      }
+      case None =>
+        throw new ApdlProjectException(s"Unknow type for input ${input.identifier}")
+    }
   }
 
   // Generate the default input inside the symbol table
