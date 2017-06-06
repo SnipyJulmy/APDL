@@ -4,6 +4,8 @@ import org.scalacheck.Gen
 object StringGenerators {
   def typGen: Gen[String] = Gen.oneOf(ApdlType.values).map(_.toString)
 
+  def stdTypGen: Gen[String] = Gen.oneOf(ApdlType.stdValues).map(_.toString)
+
   def parameterGen: Gen[String] = for {
     id <- Gen.identifier
     typ <- typGen
@@ -17,6 +19,8 @@ object StringGenerators {
     s <- Gen.alphaNumStr
     l <- Gen.alphaNumStr
     e <- Gen.alphaNumStr
+    typ <- stdTypGen
+    t <- Gen.oneOf(None, Some(typ))
   } yield
     s"""
        |@gen $id {
@@ -24,6 +28,12 @@ object StringGenerators {
        |  setup = "$s"
        |  loop = "$l"
        |  expr = "$e"
+       |  ${
+      t match {
+        case Some(value) => s"type = $value"
+        case None => s""
+      }
+    }
        |}
     """.stripMargin
 
@@ -82,6 +92,8 @@ class ApdlBaseGenerators(maxIdentifierSize: Int = 20) {
   } yield (c :: cs).mkString
 
   def typGen: Gen[ApdlType] = Gen.oneOf(ApdlType.values)
+
+  def stdTypGen: Gen[ApdlType] = Gen.oneOf(ApdlType.stdValues)
 
   def genParameter: Gen[Parameter] = for {
     id <- genIdentifier
@@ -208,7 +220,7 @@ class ApdlExprGenerators(maxExprSize: Int = 4) extends ApdlBaseGenerators {
 
   def genFunctionCall(depth: Int): Gen[FunctionCall] = for {
     id <- genIdentifier
-    args <- Gen.listOfN(maxExprSize,genExprInner(depth))
+    args <- Gen.listOfN(maxExprSize, genExprInner(depth))
   } yield FunctionCall(id, args)
 
   def genArrayAccess(depth: Int): Gen[ArrayAccess] = for {
@@ -378,7 +390,9 @@ class ApdlDefineGenerators(maxExprSize: Int = 4, maxBlockSize: Int = 10) extends
     s <- Gen.alphaNumStr
     l <- Gen.alphaNumStr
     e <- Gen.alphaNumStr
-  } yield apdl.parser.Gen(g, s, l, e)
+    typ <- stdTypGen
+    t <- Gen.oneOf(None, Some(typ))
+  } yield apdl.parser.Gen(g, s, l, e, t)
 
   def genGens: Gen[Map[String, apdl.parser.Gen]] = for {
     id <- Gen.listOf(Gen.identifier)
@@ -414,36 +428,36 @@ class ApdlDefineGenerators(maxExprSize: Int = 4, maxBlockSize: Int = 10) extends
   /* APDL Transform DSL case class Generator */
 }
 
-class ApdlProjectGenerators(maxExprSize: Int = 4, maxBlockSize: Int = 10, maxGeneralListSize : Int = 10)
+class ApdlProjectGenerators(maxExprSize: Int = 4, maxBlockSize: Int = 10, maxGeneralListSize: Int = 10)
   extends ApdlDefineGenerators(maxExprSize, maxBlockSize) {
 
   def genProject: Gen[ApdlProject] = for {
-    l <- Gen.choose(0,maxGeneralListSize)
+    l <- Gen.choose(0, maxGeneralListSize)
     name <- genIdentifier
-    devices <- Gen.listOfN(l,genDevice)
-    defineInputs <- Gen.listOfN(l,genDefineInput)
-    defineComponents <- Gen.listOfN(l,genDefineComponent)
-    defineTransforms <- Gen.listOfN(l,genDefineTransform)
+    devices <- Gen.listOfN(l, genDevice)
+    defineInputs <- Gen.listOfN(l, genDefineInput)
+    defineComponents <- Gen.listOfN(l, genDefineComponent)
+    defineTransforms <- Gen.listOfN(l, genDefineTransform)
   } yield ApdlProject(name, devices, defineInputs, defineComponents, defineTransforms)
 
   def genDevice: Gen[ApdlDevice] = for {
-    l <- Gen.choose(0,maxGeneralListSize)
+    l <- Gen.choose(0, maxGeneralListSize)
     name <- genIdentifier
     id <- genIdentifier
     framework <- genIdentifier
-    inputs <- Gen.listOfN(l,genInput)
-    serials <- Gen.listOfN(l,genSerial)
-    params <- Gen.listOfN(l,for {
+    inputs <- Gen.listOfN(l, genInput)
+    serials <- Gen.listOfN(l, genSerial)
+    params <- Gen.listOfN(l, for {
       _1 <- genIdentifier
       _2 <- genIdentifier
     } yield (_1, _2))
   } yield ApdlDevice(name, id, framework, inputs, serials, params.toMap)
 
   def genInput: Gen[ApdlInput] = for {
-    l <- Gen.choose(0,maxGeneralListSize)
+    l <- Gen.choose(0, maxGeneralListSize)
     id <- genIdentifier
     inputName <- genIdentifier
-    params <- Gen.listOfN(l,genParameter.map(p => p.id))
+    params <- Gen.listOfN(l, genParameter.map(p => p.id))
   } yield ApdlInput(id, inputName, params)
 
   def genSerial: Gen[ApdlSerial] = for {

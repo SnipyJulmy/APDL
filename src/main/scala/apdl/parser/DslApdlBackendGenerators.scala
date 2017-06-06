@@ -66,6 +66,10 @@ trait DslApdlBackendGenerators extends TransformApdlBackendGenerators {
        |setup = "${gen.setup}"
        |loop = "${gen.loop}"
        |expr = "${gen.expr}"
+       |${gen.typ match {
+      case Some(value) => s"type = ${toApdlCode(value)}"
+      case None => ""
+    }}
      """.stripMargin
 
   def toApdlCode(x: Map[String, Gen]): String = x.map { case (k, v) =>

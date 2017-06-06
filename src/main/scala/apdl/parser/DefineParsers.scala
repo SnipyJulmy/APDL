@@ -33,7 +33,7 @@ class DefineParsers extends TransformDslParser with RegexParsers with PackratPar
   }
 
   lazy val genBody: PackratParser[Gen] = {
-    global ~ setup ~ loop ~ expr ^^ { case (g ~ s ~ l ~ e) => Gen(g, s, l, e) }
+    global ~ setup ~ loop ~ expr ~ (genType?) ^^ { case (g ~ s ~ l ~ e ~ t) => Gen(g, s, l, e, t) }
   }
 
   lazy val global: PackratParser[String] = "global" ~ "=" ~ "\"" ~> literalString <~ "\"" ^^ { str => str }
@@ -41,6 +41,7 @@ class DefineParsers extends TransformDslParser with RegexParsers with PackratPar
   lazy val loop: PackratParser[String] = "loop" ~ "=" ~ "\"" ~> literalString <~ "\"" ^^ { str => str }
   lazy val expr: PackratParser[String] = "expr" ~ "=" ~ "\"" ~> literalString <~ "\"" ^^ { str => str }
   lazy val literalString: PackratParser[String] = """(\\.|[^\\"])*""".r ^^ { str => str }
+  lazy val genType : PackratParser[ApdlType] = "type" ~ "=" ~> apdlStdType
 
   lazy val defineInput: PackratParser[ApdlDefineInput] = "input" ~> identifier ~ parameters ~ (lb ~> gens <~ rb) ^^ {
     case (defId ~ defParams ~ defGens) => ApdlDefineInput(defId, defParams, defGens)
@@ -72,7 +73,7 @@ class DefineParsers extends TransformDslParser with RegexParsers with PackratPar
 
 case class Inputs(parameters: List[Parameter])
 case class Output(outputType: ApdlType)
-case class Gen(global: String, setup: String, loop: String, expr: String)
+case class Gen(global: String, setup: String, loop: String, expr: String, typ : Option[ApdlType])
 
 sealed trait ApdlDefine {
   def identifier: String = this match {
@@ -118,6 +119,7 @@ object ApdlType {
   case object Byte extends ApdlType
 
   def values: Seq[ApdlType] = Seq(Str, Id, Int, Float, Long, Bool, Double, Short, Char, Byte)
+  def stdValues: Seq[ApdlType] = Seq(Int, Float, Long, Bool, Double, Short, Char, Byte)
 }
 
 object DefineUtils {

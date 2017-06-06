@@ -80,8 +80,8 @@ class DefineTest extends ApdlFlatSpec {
         assert(inputs == Inputs(List(Parameter("x", ApdlType.Int), Parameter("y", ApdlType.Int))))
         assert(outputType == Output(ApdlType.Int))
         assert(gens == Map(
-          "mbed" -> Gen("", "", "", "@x @op @y"),
-          "arduino" -> Gen("", "", "", "@x @op @y")
+          "mbed" -> Gen("", "", "", "@x @op @y", None),
+          "arduino" -> Gen("", "", "", "@x @op @y", None)
         ))
       case _ => fail("Should not produce something else than a define component")
     }
