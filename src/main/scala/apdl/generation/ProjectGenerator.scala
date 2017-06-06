@@ -95,7 +95,7 @@ class ProjectGenerator(project: ApdlProject)(implicit config: ApdlConfig) {
   }
 
 
-  case class PlatformIOIniInfo(boardsId: String, framework: String, platform: String, lib_force: Option[String]) {
+  case class PlatformIOIniInfo(boardsId: String, framework: String, platform: String, libForce: Option[String], libDeps: List[String]) {
     def mkFile(rootDir: File): Unit = {
       if (rootDir.exists())
         if (rootDir.isDirectory) {
@@ -107,7 +107,14 @@ class ProjectGenerator(project: ApdlProject)(implicit config: ApdlConfig) {
           outputStream.append(s"platform = $platform\n")
           outputStream.append(s"board = $boardsId\n")
           outputStream.append(s"framework = $framework\n")
-          lib_force match {
+          if(libDeps.nonEmpty) {
+            outputStream.append(
+              s"""
+                 |lib_deps =
+                 |  ${libDeps.map(l => s"\t$l") mkString "\n"}
+               """.stripMargin)
+          }
+          libForce match {
             case Some(value) => outputStream.append(s"lib_force = $value")
             case _ =>
           }
@@ -133,7 +140,7 @@ class ProjectGenerator(project: ApdlProject)(implicit config: ApdlConfig) {
       val boards = getBoards(device.id)
       val board = boards.find(_.id == device.id).getOrElse(throw new ApdlProjectException(s"Can't get info for board : ${device.id}"))
       val platform = board.platform
-      val platformIOIniInfo: PlatformIOIniInfo = PlatformIOIniInfo(device.id, device.framework, platform, None)
+      val platformIOIniInfo: PlatformIOIniInfo = PlatformIOIniInfo(device.id, device.framework, platform, None, List("Timer"))
       generatePlatformIOIni(rootDir, platformIOIniInfo)
 
       // generate the src
