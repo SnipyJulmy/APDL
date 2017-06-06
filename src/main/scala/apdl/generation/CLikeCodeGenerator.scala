@@ -99,18 +99,23 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
           symbolTable.add(i.identifier, InputTransformed(i.identifier, definition.asInstanceOf[ApdlDefineTransform], sourceInput))
 
         } else if (isComponented(i)) {
-          val sourceInputs: List[Input] = symbolTable.gets(i.args).map {
+
+          val definition = defines.find(_.identifier == i.defineInputIdentifier) match {
+            case Some(value) => value
+            case None => throw new ApdlProjectException(s"Unknow define for input ${i.identifier}")
+          }
+
+          assume(definition.isInstanceOf[ApdlDefineComponent])
+
+          val nbNonInputs = definition.asInstanceOf[ApdlDefineComponent].parameters.length
+          val args = i.args.drop(nbNonInputs)
+          val sourceInputs: List[Input] = symbolTable.gets(args).map {
             case default: InputDefault => default
             case transformed: InputTransformed => transformed
             case componented: InputComponented => componented
             case _ => throw new ApdlProjectException(s"Can't find source input for input ${i.identifier}")
           }
 
-          val definition = defines.find(_.identifier == i.defineInputIdentifier) match {
-            case Some(value) => value
-            case None => throw new ApdlProjectException(s"Unknow define for input ${i.identifier}")
-          }
-          assume(definition.isInstanceOf[ApdlDefineComponent])
           symbolTable.add(i.identifier, InputComponented(i.identifier, definition.asInstanceOf[ApdlDefineComponent], sourceInputs))
 
         } else {
@@ -156,7 +161,16 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
       symbolTable.contains(sourceInput)
     }
     else if (isComponented(input)) {
-      input.args.forall(symbolTable.contains)
+      val componentDefine = defines.find(_.identifier == input.defineInputIdentifier) match {
+        case Some(value) => value match {
+          case component: ApdlDefineComponent => component
+          case _ => throw new ApdlProjectException(s"Unexpected definition found for input ${input.identifier} from device ${device.name}")
+        }
+        case None => throw new ApdlProjectException(s"Unknow define component for input ${input.identifier} from device ${device.name}")
+      }
+      val nbNonInputs = componentDefine.parameters.length
+      val args = input.args.drop(nbNonInputs)
+      args.forall(symbolTable.contains)
     }
     else {
       throw new ApdlProjectException(s"Wrong input type for input ${input.identifier} from device ${device.name}")
