@@ -19,6 +19,7 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
     case None => throw new ApdlProjectException(s"Unknow framework ${device.framework}")
   }
 
+
   def mkDevice(srcDir: File): Unit = {
     val ext = fileExtension(device.framework)
     val mainFile = new File(srcDir, s"${project.name}_name.$ext")
@@ -28,6 +29,8 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
     val mainPw = ApdlPrintWriter.getPw(framework)(mainFile)
     debug(s"Generate inputs for device ${device.name}")
     generateInputs(mainPw)
+    debug(s"Generate the components")
+    generateComponents(mainPw)
     debug(s"Generate serials for device ${device.name}")
     generateSerials(mainPw)
     mainPw.close()
@@ -107,7 +110,9 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
 
           assume(definition.isInstanceOf[ApdlDefineComponent])
 
-          val nbNonInputs = definition.asInstanceOf[ApdlDefineComponent].parameters.length
+          val component = definition.asInstanceOf[ApdlDefineComponent]
+
+          val nbNonInputs = component.parameters.length
           val args = i.args.drop(nbNonInputs)
           val sourceInputs: List[Input] = symbolTable.gets(args).map {
             case default: InputDefault => default
@@ -115,6 +120,7 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
             case componented: InputComponented => componented
             case _ => throw new ApdlProjectException(s"Can't find source input for input ${i.identifier}")
           }
+
 
           symbolTable.add(i.identifier, InputComponented(i.identifier, definition.asInstanceOf[ApdlDefineComponent], sourceInputs))
 
@@ -219,6 +225,42 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
     }
   }
 
+  def generateComponents(out: ApdlPrintWriter): Unit = device.inputs.foreach { input =>
+    val comp: ApdlDefine = defines.find(_.identifier == input.defineInputIdentifier) match {
+      case Some(value) => value
+      case None => throw new ApdlProjectException(s"Unknow definition for input ${input.identifier} on device ${device.name}")
+    }
+    if (comp.isInstanceOf[ApdlDefineComponent]) {
+      val component = comp.asInstanceOf[ApdlDefineComponent]
+      // Generate the component
+      if (!symbolTable.contains(component.identifier)) {
+        // A component is like a function
+        val retTyp = transformCodeGen(component.outputType.outputType)
+
+        implicit val args: Map[String, String] = componentSymbols(input.args, component.parameters, component.inputs.parameters)
+        val gen = component.gens.getOrElse(framework.identifier,
+          throw new ApdlProjectException(s"Unknow framework ${framework.identifier} for input ${input.identifier} on device ${device.name}"))
+
+        out.printlnSetup(gen.setup.replaceWithArgs.removeSymbol())
+        out.printlnLoop(gen.loop.replaceWithArgs.removeSymbol())
+        out.printlnGlobal(gen.global.replaceWithArgs.removeSymbol())
+
+        val expr = gen.expr.replaceWithArgs.removeSymbol()
+        val parameters = component.inputs.parameters.map(p => s"${transformCodeGen(p.typ)} ${p.id}").mkString(",")
+        val id = s"component_${component.identifier}_${input.identifier}"
+
+        out.printlnFunction(
+          s"""
+             |// Component ${component.identifier}
+             |$retTyp $id($parameters) {
+             |  return $expr;
+             |}
+             |// End of ${component.identifier}
+               """.stripMargin)
+      }
+    }
+  }
+
   def generateArduinoSerials(out: ApdlPrintWriter): Unit = device.serials.foreach { serial =>
     // Generate callback function
     val input = symbolTable.getOption(serial.inputName) match {
@@ -236,6 +278,7 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
           case None => throw new ApdlCodeGenerationException(s"Unknow type for input $name")
         }
       case ApdlDefineComponent(_, _, _, outputType, _) =>
+
         outputType.outputType
       case ApdlDefineTransform(functionDecl) =>
         functionDecl.header.resultType.asApdlType
@@ -253,8 +296,10 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
          |void $callbackIdentifier(){
          |  // Get data
          |  ${transformCodeGen(dataType)} data = $expr;
+         |  // As a byte array...
+         |  byte * b = (byte *) &data;
          |  // Send data
-         |  Serial.write(data);
+         |  Serial.write(b,4);
          |}
        """.stripMargin
     }
@@ -267,9 +312,9 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
     case InputTransformed(_, define, sourceInput) =>
       val transformIdentifier = define.functionDecl.header.identifier
       s"$transformIdentifier(${getExpr(sourceInput)})"
-    case InputComponented(_, define, sourceInputs) =>
-      val componentIdentifier = define.identifier
-      s"$componentIdentifier(${sourceInputs map getExpr mkString ","})"
+    case InputComponented(id, define, sourceInputs) =>
+      val identifier = s"component_${define.identifier}_$id"
+      s"$identifier(${sourceInputs map getExpr mkString ","})"
   }
 
   def generateMbedSerials(out: ApdlPrintWriter): Unit = {
@@ -295,7 +340,7 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
       inner(args, string)
     }
 
-    def removeApdlSymbol(symbol: String = "@"): String = {
+    def removeSymbol(symbol: String = "@"): String = {
       string.replaceAll("@", "")
     }
   }
@@ -338,7 +383,7 @@ class CLikeTransformCodeGenerator {
       case TfBoolean => "bool"
       case TfArray(typ: TfTyp) => s"${apply(typ)}*"
     }
-    case TypedIdentifier(name, typ) => s"$name ${apply(typ)}"
+    case TypedIdentifier(name, typ) => s"${apply(typ)} $name"
     case s: Statement => s match {
       case While(cond, statement) =>
         s"""
