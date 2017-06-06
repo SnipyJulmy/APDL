@@ -236,15 +236,6 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
   }
 }
 
-object IdGenerator {
-  var itr: Long = 0
-
-  def nextVariable(id: String): String = {
-    itr = itr + 1
-    s"${id}_$itr"
-  }
-}
-
 class CLikeTransformCodeGenerator {
   def apply(apdlAst: ApdlAst): String = apdlAst match {
     case e: Expr => e match {
