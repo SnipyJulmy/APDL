@@ -340,7 +340,8 @@ class ApdlStatementGenerators(maxExprSize: Int = 4, maxBlockSize: Int = 10) exte
   def genFunctionHeader: Gen[FunctionHeader] = for {
     retTyp <- genRetTyp
     id <- Gen.identifier
-    parameters <- Gen.listOf(genTypedIdentifier)
+    nbParameters <- Gen.choose(0,10)
+    parameters <- Gen.listOfN(nbParameters,genTypedIdentifier)
   } yield FunctionHeader(retTyp, id, parameters)
 
   def genFunctionBody: Gen[FunctionBody] = for {
