@@ -220,7 +220,56 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
   }
 
   def generateArduinoSerials(out: ApdlPrintWriter): Unit = device.serials.foreach { serial =>
-    /*TODO*/
+    // Generate callback function
+    val input = symbolTable.getOption(serial.inputName) match {
+      case Some(value) => value match {
+        case input: Input => input
+        case _ => throw new ApdlProjectException(s"Unknow input name ${serial.inputName} for device ${device.name}")
+      }
+      case None => throw new ApdlProjectException(s"Unknow input name ${serial.inputName} for device ${device.name}")
+    }
+
+    val dataType = input.getDefinition match {
+      case ApdlDefineInput(name, _, gens) =>
+        gens.getOrElse(framework.identifier, throw new ApdlCodeGenerationException(s"Unknow type for input $name")).typ match {
+          case Some(value) => value
+          case None => throw new ApdlCodeGenerationException(s"Unknow type for input $name")
+        }
+      case ApdlDefineComponent(_, _, _, outputType, _) =>
+        outputType.outputType
+      case ApdlDefineTransform(functionDecl) =>
+        functionDecl.header.resultType.asApdlType
+    }
+
+    val expr = getExpr(input)
+    val callbackIdentifier = s"serial_${serial.inputName}"
+    val sampling = serial.sampling match {
+      case ApdlSamplingUpdate => throw new UnsupportedOperationException("Sampling by update isn't supported yet")
+      case timer: ApdlSamplingTimer => timer.ms
+    }
+
+    out.printlnFunction {
+      s"""
+         |void $callbackIdentifier(){
+         |  // Get data
+         |  ${transformCodeGen(dataType)} data = $expr;
+         |  // Send data
+         |  Serial.write(data);
+         |}
+       """.stripMargin
+    }
+
+    out.printlnSetup(s"t.every($sampling,$callbackIdentifier);")
+  }
+
+  def getExpr(input: Input): String = input match {
+    case InputDefault(_, _, _, expr) => expr
+    case InputTransformed(_, define, sourceInput) =>
+      val transformIdentifier = define.functionDecl.header.identifier
+      s"$transformIdentifier(${getExpr(sourceInput)})"
+    case InputComponented(_, define, sourceInputs) =>
+      val componentIdentifier = define.identifier
+      s"$componentIdentifier(${sourceInputs map getExpr mkString ","})"
   }
 
   def generateMbedSerials(out: ApdlPrintWriter): Unit = {
