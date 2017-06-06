@@ -12,7 +12,7 @@ abstract class ApdlFlatSpec extends FlatSpec with Checkers {
   import parser._
 
   implicit override val generatorDrivenConfig = PropertyCheckConfiguration(
-    minSize = 400,
+    minSize = 700,
     sizeRange = 100
   )
 
