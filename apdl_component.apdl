@@ -3,13 +3,15 @@
         global = "AnalogIn @id(A@pin)"
         setup = ""
         loop = ""
-        expr = "@id"
+        expr = "@id.read()"
+        type = float
     }
     @gen arduino {
         global = ""
         setup = ""
         loop = ""
         expr = "analogRead(@pin)"
+        type = int
     }
 }
 
@@ -18,13 +20,15 @@
         global = "DigitalIn @id(D@pin)"
         setup = ""
         loop = ""
-        expr = "@id"
+        expr = "@id.read()"
+        type = float
     }
     @gen arduino {
         global = ""
         setup = ""
         loop = ""
         expr = "digitalRead(@pin)"
+        type = int
     }
 }
 
