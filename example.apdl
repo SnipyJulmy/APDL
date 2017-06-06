@@ -9,6 +9,7 @@ project_name = "Example"
     @input lum analogInput 0
     @input temp tf rawTemp
     @input temp2 tf temp
+    @input lumTemp simpleOperator + lum temp
     @serial lum each 1 s
     @serial temp each 1 s
     @serial temp2 each 1 s
