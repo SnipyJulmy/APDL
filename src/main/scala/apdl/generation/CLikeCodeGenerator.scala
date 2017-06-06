@@ -82,7 +82,6 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
     def process(inputs: List[ApdlInput]): Unit = if (inputs.nonEmpty) {
       val (generableInputs, nonGenerableInputs) = inputs.partition(isGenerable)
       generableInputs.foreach { i =>
-        // TODO put into symbol table
         if (isTransform(i)) {
           val sourceInput = symbolTable.get(i.args.head) match {
             case default: InputDefault => default
@@ -96,9 +95,25 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
           }
           assume(definition.isInstanceOf[ApdlDefineTransform])
           symbolTable.add(i.identifier, InputTransformed(i.identifier, definition.asInstanceOf[ApdlDefineTransform], sourceInput))
-        }
-        if(isComponented(i)) {
-          println(s"Componented input")
+
+        } else if (isComponented(i)) {
+          val sourceInputs: List[Input] = symbolTable.gets(i.args).map {
+            case default: InputDefault => default
+            case transformed: InputTransformed => transformed
+            case componented: InputComponented => componented
+            case _ => throw new ApdlProjectException(s"Can't find source input for input ${i.identifier}")
+          }
+
+          val definition = defines.find(_.identifier == i.defineInputIdentifier) match {
+            case Some(value) => value
+            case None => throw new ApdlProjectException(s"Unknow define for input ${i.identifier}")
+          }
+          assume(definition.isInstanceOf[ApdlDefineComponent])
+          symbolTable.add(i.identifier, InputComponented(i.identifier, definition.asInstanceOf[ApdlDefineComponent], sourceInputs))
+
+        } else {
+          // something is wrong...
+          throw new ApdlProjectException(s"Input ${i.identifier} from device ${device.name} encountered some problems")
         }
       }
       process(nonGenerableInputs)
