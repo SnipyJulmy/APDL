@@ -26,8 +26,6 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
       throw new ApdlDirectoryException(s"Can't create file ${mainFile.getAbsolutePath}")
     debug(s"create file ${mainFile.getAbsolutePath}")
     val mainPw = ApdlPrintWriter.getPw(framework)(mainFile)
-    debug(s"Generate definition for device ${device.name}")
-    generateDefinitions(mainPw)
     debug(s"Generate inputs for device ${device.name}")
     generateInputs(mainPw)
     debug(s"Generate serials for device ${device.name}")
@@ -53,24 +51,12 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
     ((args zip params) map tupled((s, p) => (p.id, s))).toMap
   }
 
-  // Generate the definition, kind of the data structure of the project
-  def generateDefinitions(out: ApdlPrintWriter): Unit = defines.foreach {
-    case _: ApdlDefineInput =>
-    // Can't generate define input at this moment
-    case _: ApdlDefineComponent =>
-    // Can't generate component at this moment
-    case ApdlDefineTransform(functionDecl) =>
-      if (!symbolTable.contains(functionDecl.header.identifier)) {
-        // A transform is a function
-        out.printFunction(transformCodeGen(functionDecl))
-        symbolTable.add(functionDecl.header.identifier, Transform(functionDecl))
-      }
-  }
-
   def generateInputs(out: ApdlPrintWriter): Unit = {
     // Generate default input
+    debug(s"\tGenerate default inputs")
     generateDefaultInputs(out)
     // Make the symbolTable for non-default input
+    debug(s"\tGenerate non default inputs")
     generateNonDefaultInputs(out)
   }
 
@@ -94,6 +80,22 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
             case None => throw new ApdlProjectException(s"Unknow define for input ${i.identifier}")
           }
           assume(definition.isInstanceOf[ApdlDefineTransform])
+
+          // code generation
+          val functionDecl = definition.asInstanceOf[ApdlDefineTransform].functionDecl
+
+          if (!symbolTable.contains(functionDecl.header.identifier)) {
+            // A transform is a function
+            out.printlnFunction {
+              s"""
+                 | // Transform ${functionDecl.header.identifier}
+                 | ${transformCodeGen(functionDecl)}
+                 | // End transform ${functionDecl.header.identifier}
+             """.stripMargin
+            }
+            // Add the transform into the symbol table
+            symbolTable.add(functionDecl.header.identifier, Transform(functionDecl))
+          }
           symbolTable.add(i.identifier, InputTransformed(i.identifier, definition.asInstanceOf[ApdlDefineTransform], sourceInput))
 
         } else if (isComponented(i)) {
