@@ -1,5 +1,5 @@
 import apdl.ApdlParserException
-import apdl.parser.{DefineParsers, MainParsers}
+import apdl.parser.MainParsers
 import org.scalatest.FlatSpec
 import org.scalatest.prop.Checkers
 
@@ -12,7 +12,7 @@ abstract class ApdlFlatSpec extends FlatSpec with Checkers {
   import parser._
 
   implicit override val generatorDrivenConfig = PropertyCheckConfiguration(
-    minSize = 700,
+    minSize = 1300,
     sizeRange = 100
   )
 
