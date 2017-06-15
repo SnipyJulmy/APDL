@@ -37,3 +37,4 @@ project/plugins/project/
 /src/main/resources/example.saml
 /bak/
 /default-apdl-output/
+/src/main/scala/apdl/report_code_example/

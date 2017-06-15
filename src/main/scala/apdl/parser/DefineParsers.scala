@@ -9,7 +9,6 @@ import scala.util.parsing.combinator.{PackratParsers, RegexParsers}
 class DefineParsers extends TransformDslParser with RegexParsers with PackratParsers {
 
   override protected val whiteSpace: Regex = "[ \t\r\f\n]+".r
-
   override def skipWhitespace: Boolean = true
 
   lazy val defines: PackratParser[List[ApdlDefine]] = rep(apdlDefine)
