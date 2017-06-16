@@ -1,6 +1,6 @@
-@define input analogInput pin:int {
+@define input analogInput pin:str {
     @gen mbed {
-        global = "AnalogIn @id(A@pin)"
+        global = "AnalogIn @id(@pin);"
         setup = ""
         loop = ""
         expr = "@id.read()"
@@ -15,9 +15,9 @@
     }
 }
 
-@define input digitalInput pin:int {
+@define input digitalInput pin:str {
     @gen mbed {
-        global = "DigitalIn @id(D@pin)"
+        global = "DigitalIn @id(Dpin);"
         setup = ""
         loop = ""
         expr = "@id.read()"
