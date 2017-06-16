@@ -48,19 +48,18 @@ class ProjectGenerator(project: ApdlProject)(implicit config: ApdlConfig) {
     }
   }
 
-  def recursiveDelete(root: File): Boolean = {
-    if (root != null) {
-      val files = root.listFiles()
-      if (files == null) true
-      else for (file <- files) {
-        if (file != null) {
-          debug(s"remove ${file.getAbsolutePath}")
-          recursiveDelete(file)
-        }
+  def recursiveDelete(file: File): Boolean = Option(file) match {
+    case Some(root) =>
+      Option(root.listFiles()) match {
+        case Some(files) =>
+          files.forall(recursiveDelete)
+          debug(s"remove ${root.getAbsolutePath}")
+          root.delete()
+        case None =>
+          debug(s"remove ${root.getAbsolutePath}")
+          root.delete()
       }
-      debug(s"remove ${root.getAbsolutePath}")
-      root.delete()
-    } else true
+    case None => true
   }
 
   def mkDir(dir: File): File = {
@@ -107,7 +106,7 @@ class ProjectGenerator(project: ApdlProject)(implicit config: ApdlConfig) {
           outputStream.append(s"platform = $platform\n")
           outputStream.append(s"board = $boardsId\n")
           outputStream.append(s"framework = $framework\n")
-          if(libDeps.nonEmpty) {
+          if (libDeps.nonEmpty) {
             outputStream.append(
               s"""
                  |lib_deps =
