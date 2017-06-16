@@ -38,7 +38,7 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
 
   def fileExtension(framework: String): String = framework match {
     case "arduino" => "ino"
-    case "mbed" => "c"
+    case "mbed" => "cpp"
     case _ => throw new ApdlCodeGenerationException(s"Unknow framework : $framework")
   }
 
@@ -230,6 +230,7 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
       case Some(value) => value
       case None => throw new ApdlProjectException(s"Unknow definition for input ${input.identifier} on device ${device.name}")
     }
+    //noinspection TypeCheckCanBeMatch
     if (comp.isInstanceOf[ApdlDefineComponent]) {
       val component = comp.asInstanceOf[ApdlDefineComponent]
       // Generate the component
@@ -317,8 +318,55 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
       s"$identifier(${sourceInputs map getExpr mkString ","})"
   }
 
-  def generateMbedSerials(out: ApdlPrintWriter): Unit = {
-    /*TODO*/
+  def generateMbedSerials(out: ApdlPrintWriter): Unit = device.serials.foreach { serial =>
+     // Generate callback function
+    // TODO
+    val input = symbolTable.getOption(serial.inputName) match {
+      case Some(value) => value match {
+        case input: Input => input
+        case _ => throw new ApdlProjectException(s"Unknow input name ${serial.inputName} for device ${device.name}")
+      }
+      case None => throw new ApdlProjectException(s"Unknow input name ${serial.inputName} for device ${device.name}")
+    }
+
+    val dataType = input.getDefinition match {
+      case ApdlDefineInput(name, _, gens) =>
+        gens.getOrElse(framework.identifier, throw new ApdlCodeGenerationException(s"Unknow type for input $name")).typ match {
+          case Some(value) => value
+          case None => throw new ApdlCodeGenerationException(s"Unknow type for input $name")
+        }
+      case ApdlDefineComponent(_, _, _, outputType, _) =>
+
+        outputType.outputType
+      case ApdlDefineTransform(functionDecl) =>
+        functionDecl.header.resultType.asApdlType
+    }
+
+    val expr = getExpr(input)
+    val callbackIdentifier = s"serial_${serial.inputName}"
+    val sampling = serial.sampling match {
+      case ApdlSamplingUpdate => throw new UnsupportedOperationException("Sampling by update isn't supported yet")
+      case timer: ApdlSamplingTimer => timer.s
+    }
+
+    // Function to send the data
+    out.printlnFunction {
+      s"""
+         |void $callbackIdentifier(){
+         |  // Get data
+         |  ${transformCodeGen(dataType)} data = $expr;
+         |  // As a byte array...
+         |  uint8_t * b = (uint8_t *) &data;
+         |  // Send data
+         |  unsigned int itr = sizeof(b);
+         |  while(itr < sizeof(b)) {
+         |      pc.putc(b[itr++]);
+         |  }
+         |}
+       """.stripMargin
+    }
+
+    out.printlnSetup(s"ticker.attach(&$callbackIdentifier,$sampling.0);")
   }
 
   def generateSerials(out: ApdlPrintWriter): Unit = framework match {
