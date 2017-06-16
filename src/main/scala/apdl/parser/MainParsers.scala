@@ -107,6 +107,7 @@ case class ApdlSerial(inputName: String, sampling: ApdlSampling)
 sealed trait ApdlSampling
 case object ApdlSamplingUpdate extends ApdlSampling
 case class ApdlSamplingTimer(value: Int, timeUnit: ApdlTimeUnit) extends ApdlSampling {
+
   def ms: Int = timeUnit match {
     case ApdlTimeUnit.ns => value / 1000
     case ApdlTimeUnit.ms => value
@@ -114,6 +115,15 @@ case class ApdlSamplingTimer(value: Int, timeUnit: ApdlTimeUnit) extends ApdlSam
     case ApdlTimeUnit.m => value * 1000 * 60
     case ApdlTimeUnit.h => value * 1000 * 60 * 60
     case ApdlTimeUnit.d => value * 1000 * 60 * 60 * 24
+  }
+
+  def s:Int = timeUnit match {
+    case ApdlTimeUnit.ns => value / 1000000
+    case ApdlTimeUnit.ms => value / 1000
+    case ApdlTimeUnit.s => value
+    case ApdlTimeUnit.m => value * 60
+    case ApdlTimeUnit.h => value * 60 * 60
+    case ApdlTimeUnit.d => value * 60 * 60 * 24
   }
 }
 
