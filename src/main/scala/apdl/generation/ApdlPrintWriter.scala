@@ -103,16 +103,25 @@ case class ApdlArduinoPrintWriter(file: File) extends ApdlPrintWriter(file) {
 }
 
 case class ApdlMbedPrintWriter(file: File) extends ApdlPrintWriter(file) {
+  val generateTimer: Boolean = true
+  val generateSerial: Boolean = true
+
   override def close(): Unit = {
     pw.append {
       s"""
          |#include <stdbool.h>
+         |#include <mbed.h>
+         |
+         |${if (generateTimer) s"Ticker ticker;"}
+         |
+         |${if (generateSerial) s"Serial pc(USBTX, USBRX);"}
          |
          |${global.toString}
          |
          |${function.toString}
          |
-         |void main(void) {
+         |int main(void) {
+         |  ${if (generateSerial) s"pc.baud(4800);"}
          |  // Setup
          |  ${setup.toString}
          |
@@ -120,6 +129,7 @@ case class ApdlMbedPrintWriter(file: File) extends ApdlPrintWriter(file) {
          |  while(1) {
          |    ${loop.toString}
          |  }
+         |  return 0;
          |}
          |
        """.stripMargin
