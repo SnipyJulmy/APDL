@@ -358,7 +358,7 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
          |  // As a byte array...
          |  uint8_t * b = (uint8_t *) &data;
          |  // Send data
-         |  unsigned int itr = sizeof(b);
+         |  unsigned int itr = 0;
          |  while(itr < sizeof(b)) {
          |      pc.putc(b[itr++]);
          |  }
