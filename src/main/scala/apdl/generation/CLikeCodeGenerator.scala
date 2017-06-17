@@ -287,25 +287,44 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
 
     val expr = getExpr(input)
     val callbackIdentifier = s"serial_${serial.inputName}"
-    val sampling = serial.sampling match {
-      case ApdlSamplingUpdate => throw new UnsupportedOperationException("Sampling by update isn't supported yet")
-      case timer: ApdlSamplingTimer => timer.ms
-    }
 
-    out.printlnFunction {
-      s"""
-         |void $callbackIdentifier(){
-         |  // Get data
-         |  ${transformCodeGen(dataType)} data = $expr;
-         |  // As a byte array...
-         |  byte * b = (byte *) &data;
-         |  // Send data
-         |  Serial.write(b,4);
-         |}
+    serial.sampling match {
+      case ApdlSamplingUpdate =>
+        val typ: String = transformCodeGen(dataType)
+        out.printlnGlobal(s"$typ last_$callbackIdentifier;")
+        out.printlnSetup(s"last_$callbackIdentifier = $expr;")
+        out.printlnFunction {
+          s"""
+             |void $callbackIdentifier(){
+             |  // Get data
+             |  $typ data = $expr;
+             |  if(data != last_$callbackIdentifier) {
+             |    // As a byte array...
+             |    byte * b = (byte *) &data;
+             |    // Send data
+             |    Serial.write(b,4);
+             |  }
+             |  last_$callbackIdentifier = data;
+             |}
        """.stripMargin
-    }
+        }
+        out.printlnSetup(s"t.every(1000,$callbackIdentifier);")
+      case timer: ApdlSamplingTimer =>
+        out.printlnFunction {
+          s"""
+             |void $callbackIdentifier(){
+             |  // Get data
+             |  ${transformCodeGen(dataType)} data = $expr;
+             |  // As a byte array...
+             |  byte * b = (byte *) &data;
+             |  // Send data
+             |  Serial.write(b,4);
+             |}
+       """.stripMargin
+        }
 
-    out.printlnSetup(s"t.every($sampling,$callbackIdentifier);")
+        out.printlnSetup(s"t.every(${timer.ms},$callbackIdentifier);")
+    }
   }
 
   def getExpr(input: Input): String = input match {
@@ -319,7 +338,7 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
   }
 
   def generateMbedSerials(out: ApdlPrintWriter): Unit = device.serials.foreach { serial =>
-     // Generate callback function
+    // Generate callback function
     // TODO
     val input = symbolTable.getOption(serial.inputName) match {
       case Some(value) => value match {
@@ -344,29 +363,49 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
 
     val expr = getExpr(input)
     val callbackIdentifier = s"serial_${serial.inputName}"
-    val sampling = serial.sampling match {
-      case ApdlSamplingUpdate => throw new UnsupportedOperationException("Sampling by update isn't supported yet")
-      case timer: ApdlSamplingTimer => timer.s
-    }
 
-    // Function to send the data
-    out.printlnFunction {
-      s"""
-         |void $callbackIdentifier(){
-         |  // Get data
-         |  ${transformCodeGen(dataType)} data = $expr;
-         |  // As a byte array...
-         |  uint8_t * b = (uint8_t *) &data;
-         |  // Send data
-         |  unsigned int itr = 0;
-         |  while(itr < sizeof(b)) {
-         |      pc.putc(b[itr++]);
-         |  }
-         |}
-       """.stripMargin
+    serial.sampling match {
+      case ApdlSamplingUpdate =>
+        val typ: String = transformCodeGen(dataType)
+        out.printlnGlobal(s"$typ last_$callbackIdentifier;")
+        out.printlnSetup(s"last_$callbackIdentifier = $expr;")
+        out.printlnFunction {
+          s"""
+             |void $callbackIdentifier(){
+             |  // Get data
+             |  $typ data = $expr;
+             |  if(data != last_$callbackIdentifier) {
+             |    // As a byte array...
+             |    byte * b = (byte *) &data;
+             |    // Send data
+             |    unsigned int itr = 0;
+             |    while(itr < sizeof(b)) {
+             |      pc.putc(b[itr++]);
+             |    }
+             |    last_$callbackIdentifier = data;
+             |  }
+             |}
+             """.stripMargin
+        }
+        out.printlnSetup(s"ticker.attach(&$callbackIdentifier,1.0);")
+      case timer: ApdlSamplingTimer =>
+        out.printlnFunction {
+          s"""
+             |void $callbackIdentifier(){
+             |  // Get data
+             |  ${transformCodeGen(dataType)} data = $expr;
+             |  // As a byte array...
+             |  uint8_t * b = (uint8_t *) &data;
+             |  // Send data
+             |  unsigned int itr = 0;
+             |  while(itr < sizeof(b)) {
+             |      pc.putc(b[itr++]);
+             |  }
+             |}
+             """.stripMargin
+        }
+        out.printlnSetup(s"ticker.attach(&$callbackIdentifier,${timer.s}.0);")
     }
-
-    out.printlnSetup(s"ticker.attach(&$callbackIdentifier,$sampling.0);")
   }
 
   def generateSerials(out: ApdlPrintWriter): Unit = framework match {

@@ -13,8 +13,8 @@ project_name = "Example"
     @input tempLum simpleOperator - temp lum
     @serial lum each 1 s
     @serial temp each 1 s
-    @serial temp2 each 1 s
-    @serial lumTemp each 2 s
+    @serial temp2 update
+    @serial lumTemp update
 }
 
 @device mbed1 {
