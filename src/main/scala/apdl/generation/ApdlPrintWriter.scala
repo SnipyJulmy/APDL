@@ -5,6 +5,8 @@ import java.io.{File, PrintWriter, StringWriter}
 import apdl.ApdlFramework
 import apdl.ApdlFramework.{Arduino, Mbed}
 
+import sys.process._
+
 abstract class ApdlPrintWriter(file: File) {
   require(file.exists())
   require(file.canWrite)
@@ -67,11 +69,22 @@ abstract class ApdlPrintWriter(file: File) {
     pw.flush()
     pw.close()
   }
+
+  def formatSource(): Unit = {
+    val filename = file.getAbsolutePath
+    val command = s"astyle --delete-empty-lines --suffix=none --style=linux --break-blocks=all $filename"
+    println(s"Invoke : $command")
+
+    val result = command !!
+
+    println(result)
+  }
 }
 
 case class ApdlArduinoPrintWriter(file: File) extends ApdlPrintWriter(file) {
   val generateTimer: Boolean = true
   val generateSerial: Boolean = true
+
 
   override def close(): Unit = {
     pw.append {
@@ -81,8 +94,10 @@ case class ApdlArduinoPrintWriter(file: File) extends ApdlPrintWriter(file) {
          |
          |${if (generateTimer) s"Timer t;"}
          |
+         |// Global definition
          |${global.toString}
          |
+         |// Function definition
          |${function.toString}
          |
          |void loop() {
@@ -99,6 +114,7 @@ case class ApdlArduinoPrintWriter(file: File) extends ApdlPrintWriter(file) {
     }
     pw.flush()
     pw.close()
+    formatSource()
   }
 }
 
@@ -116,8 +132,10 @@ case class ApdlMbedPrintWriter(file: File) extends ApdlPrintWriter(file) {
          |
          |${if (generateSerial) s"Serial pc(USBTX, USBRX);"}
          |
+         |// Global definition
          |${global.toString}
          |
+         |// Function definition
          |${function.toString}
          |
          |int main(void) {
@@ -136,6 +154,7 @@ case class ApdlMbedPrintWriter(file: File) extends ApdlPrintWriter(file) {
     }
     pw.flush()
     pw.close()
+    formatSource()
   }
 }
 

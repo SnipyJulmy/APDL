@@ -499,11 +499,9 @@ class CLikeTransformCodeGenerator {
       case Break() => s"break;"
       case Continue() => s"continue;"
       case Block(statements) =>
-        s"""
-           |{
-           |  ${statements map apply mkString "\n"}
-           |}
-         """.stripMargin
+        s"""|{
+            |  ${statements map apply mkString "\n"}
+            |}""".stripMargin
       case ExpressionStatement(expression) => s"${apply(expression)};"
       case decl: Declaration => decl match {
         // No { or } because the body is always a block and the block already generate the {}
