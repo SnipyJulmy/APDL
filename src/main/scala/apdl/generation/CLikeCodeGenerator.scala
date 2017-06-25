@@ -135,29 +135,25 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
     process(nonDefaultInputs)
   }
 
-  def isTransform(input: ApdlInput): Boolean = {
-    defines.find {
-      case ApdlDefineTransform(functionDecl) => functionDecl.header.identifier == input.defineInputIdentifier
-      case _ => false
-    } match {
-      case Some(value) =>
-        assert(value.isInstanceOf[ApdlDefineTransform])
-        assert(input.args.length == 1)
-        true
-      case None => false
-    }
+  def isTransform(input: ApdlInput): Boolean = defines.find {
+    case ApdlDefineTransform(functionDecl) => functionDecl.header.identifier == input.defineInputIdentifier
+    case _ => false
+  } match {
+    case Some(value) =>
+      assert(value.isInstanceOf[ApdlDefineTransform])
+      assert(input.args.length == 1)
+      true
+    case None => false
   }
 
-  def isComponented(input: ApdlInput): Boolean = {
-    defines.find {
-      case component: ApdlDefineComponent => component.identifier == input.defineInputIdentifier
-      case _ => false
-    } match {
-      case Some(value) =>
-        assert(value.isInstanceOf[ApdlDefineComponent])
-        true
-      case None => false
-    }
+  def isComponented(input: ApdlInput): Boolean = defines.find {
+    case component: ApdlDefineComponent => component.identifier == input.defineInputIdentifier
+    case _ => false
+  } match {
+    case Some(value) =>
+      assert(value.isInstanceOf[ApdlDefineComponent])
+      true
+    case None => false
   }
 
   def isGenerable(input: ApdlInput): Boolean = {
