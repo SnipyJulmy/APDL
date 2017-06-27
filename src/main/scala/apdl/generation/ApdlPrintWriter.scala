@@ -139,7 +139,7 @@ case class ApdlMbedPrintWriter(file: File) extends ApdlPrintWriter(file) {
          |${function.toString}
          |
          |int main(void) {
-         |  ${if (generateSerial) s"pc.baud(4800);"}
+         |  ${if (generateSerial) s"pc.baud(9600);"}
          |  // Setup
          |  ${setup.toString}
          |
