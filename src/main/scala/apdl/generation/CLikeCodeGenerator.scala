@@ -295,10 +295,9 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
              |  // Get data
              |  $typ data = $expr;
              |  if(data != last_$callbackIdentifier) {
-             |    // As a byte array...
-             |    byte * b = (byte *) &data;
-             |    // Send data
-             |    Serial.write(b,4);
+             |    char buffer[1024];
+             |    sprintf(buffer,"${serial.inputName} : ${transformCodeGen.strTypeFormater(dataType)}", data);
+             |    Serial.println(buffer);
              |  }
              |  last_$callbackIdentifier = data;
              |}
@@ -311,10 +310,9 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
              |void $callbackIdentifier(){
              |  // Get data
              |  ${transformCodeGen(dataType)} data = $expr;
-             |  // As a byte array...
-             |  byte * b = (byte *) &data;
-             |  // Send data
-             |  Serial.write(b,4);
+             |  char buffer[1024];
+             |  sprintf(buffer,"${serial.inputName} : ${transformCodeGen.strTypeFormater(dataType)}", data);
+             |  Serial.println(buffer);
              |}
        """.stripMargin
         }
@@ -529,6 +527,18 @@ class CLikeTransformCodeGenerator {
     case ApdlType.Short => "short"
     case ApdlType.Char => "char"
     case ApdlType.Byte => "byte"
+    case _ => throw new ApdlCodeGenerationException(s"Unsupported ApdlType : $typ")
+  }
+
+  def strTypeFormater(typ: ApdlType): String = typ match {
+    case ApdlType.Int => "%d"
+    case ApdlType.Float => "%f"
+    case ApdlType.Long => "%l"
+    case ApdlType.Bool => "%d"
+    case ApdlType.Double => "%f"
+    case ApdlType.Short => "%d"
+    case ApdlType.Char => "%c"
+    case ApdlType.Byte => "%c"
     case _ => throw new ApdlCodeGenerationException(s"Unsupported ApdlType : $typ")
   }
 }
