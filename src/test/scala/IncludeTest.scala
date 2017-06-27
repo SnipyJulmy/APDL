@@ -90,6 +90,10 @@ class IncludeTest extends FlatSpec with Checkers {
     }
   }
 
-  case class ApdlIncludableTestFile(name: String, content: String)
-  case class ApdlMainTestFile(name: String, content: List[String], includes: List[ApdlIncludableTestFile])
+  case class ApdlIncludableTestFile(name: String,
+                                    content: String)
+
+  case class ApdlMainTestFile(name: String,
+                              content: List[String],
+                              includes: List[ApdlIncludableTestFile])
 }
