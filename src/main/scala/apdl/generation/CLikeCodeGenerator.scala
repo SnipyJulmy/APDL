@@ -296,7 +296,8 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
              |  $typ data = $expr;
              |  if(data != last_$callbackIdentifier) {
              |    char buffer[1024];
-             |    sprintf(buffer,"${serial.inputName} : ${transformCodeGen.strTypeFormater(dataType)}", data);
+             |    sprintf(buffer,"${serial.inputName} : %d", (int)data);
+             |    //sprintf(buffer,"${serial.inputName} : ${transformCodeGen.strTypeFormater(dataType)}", data);
              |    Serial.println(buffer);
              |  }
              |  last_$callbackIdentifier = data;
@@ -311,7 +312,8 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
              |  // Get data
              |  ${transformCodeGen(dataType)} data = $expr;
              |  char buffer[1024];
-             |  sprintf(buffer,"${serial.inputName} : ${transformCodeGen.strTypeFormater(dataType)}", data);
+             |  sprintf(buffer,"${serial.inputName} : %d", (int)data);
+             |  //sprintf(buffer,"${serial.inputName} : ${transformCodeGen.strTypeFormater(dataType)}", data);
              |  Serial.println(buffer);
              |}
        """.stripMargin
@@ -333,7 +335,6 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
 
   def generateMbedSerials(out: ApdlPrintWriter): Unit = device.serials.foreach { serial =>
     // Generate callback function
-    // TODO
     val input = symbolTable.getOption(serial.inputName) match {
       case Some(value) => value match {
         case input: Input => input
@@ -369,13 +370,7 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
              |  // Get data
              |  $typ data = $expr;
              |  if(data != last_$callbackIdentifier) {
-             |    // As a byte array...
-             |    byte * b = (byte *) &data;
-             |    // Send data
-             |    unsigned int itr = 0;
-             |    while(itr < sizeof(b)) {
-             |      pc.putc(b[itr++]);
-             |    }
+             |    pc.printf("${serial.inputName} : ${transformCodeGen.strTypeFormater(dataType)}",data);
              |    last_$callbackIdentifier = data;
              |  }
              |}
@@ -388,13 +383,7 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
              |void $callbackIdentifier(){
              |  // Get data
              |  ${transformCodeGen(dataType)} data = $expr;
-             |  // As a byte array...
-             |  uint8_t * b = (uint8_t *) &data;
-             |  // Send data
-             |  unsigned int itr = 0;
-             |  while(itr < sizeof(b)) {
-             |      pc.putc(b[itr++]);
-             |  }
+             |  pc.printf("${serial.inputName} : ${transformCodeGen.strTypeFormater(dataType)}",data);
              |}
              """.stripMargin
         }
