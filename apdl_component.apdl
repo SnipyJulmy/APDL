@@ -54,7 +54,7 @@
     @out int
     @gen arduino {
         global = "int a;"
-        setup = "a = 0"
+        setup = "a = 0;"
         loop = "a = a + 1;"
         expr = "a"
   }

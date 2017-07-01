@@ -2,6 +2,23 @@ project_name = "Example"
 
 @include "apdl_component.apdl"
 
+@device A {
+    id = uno
+    framework = arduino
+    @input t analogInput 1
+    @serial t update
+}
+
+@device B {
+    id = disco_f429zi
+    framework = mbed
+    @input temp analogInput 1
+    @input t2 tf temp
+    @serial t2 each 2 s
+}
+
+
+
 @device arduino1 {
     id = uno
     framework = arduino
@@ -35,6 +52,7 @@ project_name = "Example"
     @input t analogInput 1
     @input temp tf t
     @serial temp each 1 s
+    @serial t each 1 s
 }
 
 @define transform def tf (x:int) -> float {
