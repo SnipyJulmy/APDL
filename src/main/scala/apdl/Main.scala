@@ -8,7 +8,7 @@ import ApdlUtils._
 
 object Main extends App {
 
-  implicit val config = ApdlConfig()
+  implicit val config = (new ApdlArgsParser).parse(args)
 
   val input = "example.apdl"
   val source = Source.fromFile(input).mkString
