@@ -369,7 +369,7 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
              |  // Get data
              |  $typ data = $expr;
              |  if(data != last_$callbackIdentifier) {
-             |    pc.printf("${serial.inputName} : ${transformCodeGen.strTypeFormater(dataType)}",data);
+             |    pc.printf("${serial.inputName} : ${transformCodeGen.strTypeFormater(dataType)}\\n",data);
              |    last_$callbackIdentifier = data;
              |  }
              |}
@@ -382,7 +382,7 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
              |void $callbackIdentifier(){
              |  // Get data
              |  ${transformCodeGen(dataType)} data = $expr;
-             |  pc.printf("${serial.inputName} : ${transformCodeGen.strTypeFormater(dataType)}",data);
+             |  pc.printf("${serial.inputName} : ${transformCodeGen.strTypeFormater(dataType)}\\n",data);
              |}
              """.stripMargin
         }
