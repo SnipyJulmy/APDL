@@ -9,6 +9,7 @@ project_name = "Example"
     @input rawTemp analogInput 1
     @input temp tf rawTemp
     @serial temp each 1 s
+    @serial rawTemp each 1 s
 }
 
 @device mbed1 {
