@@ -432,6 +432,8 @@ class ApdlDefineGenerators(maxExprSize: Int = 4, maxBlockSize: Int = 10) extends
 class ApdlProjectGenerators(maxExprSize: Int = 4, maxBlockSize: Int = 10, maxGeneralListSize: Int = 10)
   extends ApdlDefineGenerators(maxExprSize, maxBlockSize) {
 
+  def genPort : Gen[String] = Gen.oneOf("/dev/ttyACM0","/dev/ttyACM1")
+
   def genProject: Gen[ApdlProject] = for {
     l <- Gen.choose(0, maxGeneralListSize)
     name <- genIdentifier
@@ -448,11 +450,12 @@ class ApdlProjectGenerators(maxExprSize: Int = 4, maxBlockSize: Int = 10, maxGen
     framework <- genIdentifier
     inputs <- Gen.listOfN(l, genInput)
     serials <- Gen.listOfN(l, genSerial)
+    port <- genPort
     params <- Gen.listOfN(l, for {
       _1 <- genIdentifier
       _2 <- genIdentifier
     } yield (_1, _2))
-  } yield ApdlDevice(name, id, framework, inputs, serials, params.toMap)
+  } yield ApdlDevice(name, id, framework, port , inputs, serials, params.toMap)
 
   def genInput: Gen[ApdlInput] = for {
     l <- Gen.choose(0, maxGeneralListSize)

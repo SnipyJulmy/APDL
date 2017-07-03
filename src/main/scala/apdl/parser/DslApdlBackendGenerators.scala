@@ -87,6 +87,7 @@ trait DslApdlBackendGenerators extends TransformApdlBackendGenerators {
        |@device ${device.name} {
        |  id = ${device.id}
        |  framework = ${device.framework}
+       |  port = "${device.port}"
        |  ${device.inputs map toApdlCode mkString "\n"}
        |  ${device.serials map toApdlCode mkString "\n"}
        |  ${device.additionalParameters map tupled((k, v) => s"$k = $v") mkString "\n"}

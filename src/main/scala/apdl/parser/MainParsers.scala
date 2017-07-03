@@ -45,7 +45,10 @@ class MainParsers extends DefineParsers {
 
   def projectName: Parser[String] = "project_name" ~ "=" ~ "\"" ~> literalString <~ "\"" ^^ { str => str }
 
-  def keyValue: Parser[(String, String)] = identifier ~ "=" ~ identifier ^^ { case (k ~ _ ~ v) => (k, v) }
+  def keyValue: Parser[(String, String)] = {
+    identifier ~ ("=" ~ "\"" ~> literalString <~ "\"") ^^ { case (k ~ v) => (k, v) } |
+    identifier ~ "=" ~ identifier ^^ { case (k ~ _ ~ v) => (k, v) }
+  }
 
   def apdlInput: Parser[ApdlInput] = "@input" ~> identifier ~ identifier ~ apdlParameters ^^ {
     case (name ~ typ ~ params) => ApdlInput(name, typ, params)
@@ -82,23 +85,28 @@ class MainParsers extends DefineParsers {
       val keyValues = xs.filter(_.isInstanceOf[(String, String)]).map(_.asInstanceOf[(String, String)])
       val framework = (keyValues find tupled((k, _) => k == "framework")).getOrElse(throw new ApdlParserException(s"No framework specify for $ident"))._2
       val id = (keyValues find tupled((k, _) => k == "id")).getOrElse(throw new ApdlParserException(s"No id specify for $ident"))._2
-      val parameters = (keyValues filter tupled((k, _) => k != "id" && k != "framework")).toMap
-      ApdlDevice(ident, id, framework, inputs, serials, parameters)
+      val port = (keyValues find tupled((k, _) => k == "port")).getOrElse(throw new ApdlParserException(s"No port specify for $ident"))._2
+      val parameters = (keyValues filter tupled((k, _) => k != "id" && k != "framework" && k != "port")).toMap
+      ApdlDevice(ident, id, framework, port, inputs, serials, parameters)
     }
 
     "@device" ~> identifier ~ (lb ~> rep1(keyValue | apdlInput | apdlSerial) <~ rb) ^^ { case (ident ~ xs) => process(ident, xs) }
   }
 }
 
-case class ApdlProject(
-                        name: String,
-                        devices: List[ApdlDevice],
-                        defineInputs: List[ApdlDefineInput],
-                        defineComponents: List[ApdlDefineComponent],
-                        defineTransforms: List[ApdlDefineTransform]
-                      )
+case class ApdlProject(name: String,
+                       devices: List[ApdlDevice],
+                       defineInputs: List[ApdlDefineInput],
+                       defineComponents: List[ApdlDefineComponent],
+                       defineTransforms: List[ApdlDefineTransform])
 
-case class ApdlDevice(name: String, id: String, framework: String, inputs: List[ApdlInput], serials: List[ApdlSerial], additionalParameters: Map[String, String])
+case class ApdlDevice(name: String,
+                      id: String,
+                      framework: String,
+                      port: String,
+                      inputs: List[ApdlInput],
+                      serials: List[ApdlSerial],
+                      additionalParameters: Map[String, String])
 
 case class ApdlInput(identifier: String, defineInputIdentifier: String, args: List[String])
 
@@ -117,7 +125,7 @@ case class ApdlSamplingTimer(value: Int, timeUnit: ApdlTimeUnit) extends ApdlSam
     case ApdlTimeUnit.d => value * 1000 * 60 * 60 * 24
   }
 
-  def s:Int = timeUnit match {
+  def s: Int = timeUnit match {
     case ApdlTimeUnit.ns => value / 1000000
     case ApdlTimeUnit.ms => value / 1000
     case ApdlTimeUnit.s => value
