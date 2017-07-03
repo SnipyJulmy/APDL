@@ -24,3 +24,4 @@ scalacOptions ++= Seq(
   "-deprecation"
 )
 
+test in assembly := {}
