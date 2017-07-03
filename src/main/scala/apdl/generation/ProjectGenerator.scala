@@ -30,6 +30,11 @@ class ProjectGenerator(project: ApdlProject)(implicit config: ApdlConfig) {
     handler.mkFile(rootOutputDir)
   }
 
+  def mkDockerCompose() : Unit = {
+    val dockerCompose = new ApdlDockerCompose()
+    dockerCompose.mkFile(rootOutputDir)
+  }
+
   def mkProject(): Unit = {
     Try {
       // Create the root directory
@@ -53,6 +58,9 @@ class ProjectGenerator(project: ApdlProject)(implicit config: ApdlConfig) {
       }
 
       // Generate the docker-compose file
+      if(config.generateEcosystem) {
+        mkDockerCompose()
+      }
 
       // Generate the launcher script file
 
