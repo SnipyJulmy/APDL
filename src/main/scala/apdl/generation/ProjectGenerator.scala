@@ -25,6 +25,10 @@ class ProjectGenerator(project: ApdlProject)(implicit config: ApdlConfig) {
   private val rootOutputDir = config.outputDirectory
   implicit private val debugEnable = config.debug
 
+  def mkHandler(): Unit = {
+    val handler = new ApdlHandler(project)
+    handler.mkFile(rootOutputDir)
+  }
 
   def mkProject(): Unit = {
     Try {
@@ -42,6 +46,16 @@ class ProjectGenerator(project: ApdlProject)(implicit config: ApdlConfig) {
 
       // Generate the project for each device
       deviceProjects.foreach(_.generateProject())
+
+      // Generate the handler
+      if(config.generateHandler) {
+        mkHandler()
+      }
+
+      // Generate the docker-compose file
+
+      // Generate the launcher script file
+
     } match {
       case Failure(exception) => exitOnFailure(exception)
       case _ =>
