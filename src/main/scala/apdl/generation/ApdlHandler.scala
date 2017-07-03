@@ -31,50 +31,52 @@ class ApdlHandler(val project: ApdlProject)(implicit config: ApdlConfig) {
       s"""|import serial
           |from influxdb import InfluxDBClient
           |
-          |def process(serial, client, compValue, deviceName):
-          |  data = serial.readline()
-          |  asciiData: str = data.decode('ascii')
-          |  array = asciiData.split(":")
-          |  topic: str = array[0]
-          |  value: str = array[1]
-          |  value = value.replace("\\n", "", 1)
-          |  value = value.replace("\\r", "", 1)
-          |  value = value.replace(" ", "")
-          |  topic = topic.replace(" ", "")
-          |  for comp in compValue :
-          |    if comp in topic :
-          |      print("Send to influxdb == " + topic + " : " + value)
-          |      json = [
-          |        {
-          |          "measurement": topic + deviceName,
-          |          "fields": {
-          |            "value": int(value)
-          |          }
-          |        }
-          |      ]
-          |      client.write_points(json)
+          |
+          |def process(serial, client, comp_value, device_name):
+          |    data = serial.readline()
+          |    ascii_data: str = data.decode('ascii')
+          |    array = ascii_data.split(":")
+          |    topic: str = array[0]
+          |    value: str = array[1]
+          |    value = value.replace("\\n", "", 1)
+          |    value = value.replace("\\r", "", 1)
+          |    value = value.replace(" ", "")
+          |    topic = topic.replace(" ", "")
+          |    for comp in comp_value:
+          |        if comp in topic:
+          |            print("Send to influxdb == " + topic + " : " + value)
+          |            json = [
+          |                {
+          |                    "measurement": topic + device_name,
+          |                    "fields": {
+          |                        "value": int(value)
+          |                    }
+          |                }
+          |            ]
+          |            client.write_points(json)
+          |
           |
           |def main():
-          |  ${serials.map(_.mkSerialDeclaration).mkString("\n  ")}
-          |  user = 'root'
-          |  password = 'root'
-          |  dbname = 'apdl-default'
+          |    ${serials.map(_.mkSerialDeclaration).mkString("\n    ")}
+          |    user = 'root'
+          |    password = 'root'
+          |    dbname = 'apdl-default'
           |
-          |  client = InfluxDBClient('localhost', 8086, user, password, dbname)
-          |  client.drop_database(dbname)
-          |  print("Create database")
-          |  client.create_database(dbname)
+          |    client = InfluxDBClient('localhost', 8086, user, password, dbname)
+          |    client.drop_database(dbname)
+          |    print("Create database")
+          |    client.create_database(dbname)
           |
-          |  while True:
-          |    try:
-          |      ${serials.map(_.mkProcessCall).mkString("\n      ")}
-          |    except IndexError:
-          |      continue
-          |    except serial.serialutil.SerialException:
-          |      continue
+          |    while True:
+          |        try:
+          |            ${serials.map(_.mkProcessCall).mkString("\n            ")}
+          |        except IndexError:
+          |            continue
+          |        except serial.serialutil.SerialException:
+          |            continue
           |
           |if __name__ == "__main__":
-          |  main()
+          |    main()
           |""".stripMargin('|'))
   }
 
@@ -102,7 +104,7 @@ class ApdlHandler(val project: ApdlProject)(implicit config: ApdlConfig) {
 }
 
 case class HandlerSerial(id: String, topicNames: List[String], port: String, baud: Int = 9600, byteSize: Int = 8, timeout: Int = 1) {
-  def mkSerialDeclaration: String = s"""$id = serial.Serial('$port',$baud,bytesize=$byteSize,timeout=$timeout)"""
+  def mkSerialDeclaration: String = s"""$id = serial.Serial('$port', $baud, bytesize=$byteSize, timeout=$timeout)"""
 
-  def mkProcessCall: String = s"""process($id,client,[${topicNames.map(t => s"""'$t'""").mkString(",")}],"$id")"""
+  def mkProcessCall: String = s"""process($id, client, [${topicNames.map(t => s"""'$t'""").mkString(", ")}], "$id")"""
 }
