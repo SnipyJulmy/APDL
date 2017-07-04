@@ -71,7 +71,10 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
       val (generableInputs, nonGenerableInputs) = inputs.partition(isGenerable)
       generableInputs.foreach { i =>
         if (isTransform(i)) {
-          val sourceInput = symbolTable.get(i.args.head) match {
+          val sourceInput = symbolTable.get(
+            i.args.headOption.
+              getOrElse(throw new ApdlCodeGenerationException(s"No args for $i"))
+          ) match {
             case default: InputDefault => default
             case transformed: InputTransformed => transformed
             case componented: InputComponented => componented
