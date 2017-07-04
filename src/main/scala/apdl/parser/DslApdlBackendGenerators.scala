@@ -1,7 +1,7 @@
 package apdl.parser
 
 import apdl.parser.ApdlTimeUnit._
-import apdl.parser.ApdlType.{Bool, Byte, Char, Double, Float, Id, Int, Long, Short, Str}
+import apdl.parser.ApdlType._
 
 import scala.Function.tupled
 
