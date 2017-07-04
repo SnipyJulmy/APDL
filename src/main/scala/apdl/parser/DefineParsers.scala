@@ -3,6 +3,8 @@ package apdl.parser
 import apdl.ApdlCodeGenerationException
 import apdl.parser.ApdlType.{Id, Str}
 
+import cats.implicits._
+
 import scala.util.matching.Regex
 import scala.util.parsing.combinator.{PackratParsers, RegexParsers}
 
@@ -125,7 +127,7 @@ object DefineUtils {
   implicit class Defines(defines: List[ApdlDefine]) {
     def defineFromString(stringIdentifier: String): ApdlDefine = {
       defines
-        .find(_.identifier == stringIdentifier)
+        .find(_.identifier === stringIdentifier)
         .getOrElse(throw new ApdlCodeGenerationException(s"Unknow definition input : $stringIdentifier"))
     }
   }

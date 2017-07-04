@@ -158,7 +158,9 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
   def isGenerable(input: ApdlInput): Boolean = {
     if (isTransform(input)) {
       assert(input.args.length == 1)
-      val sourceInput = input.args.head
+      val sourceInput = input.args
+        .headOption
+        .getOrElse(throw new ApdlCodeGenerationException(s"no args for transformed input : ${input.identifier}"))
       symbolTable.contains(sourceInput)
     }
     else if (isComponented(input)) {
@@ -401,7 +403,7 @@ class CLikeCodeGenerator(project: ApdlProject, device: ApdlDevice)(implicit val 
         if (arguments.isEmpty)
           acc
         else {
-          val (id, value) = arguments.head
+          val (id, value) = arguments.headOption.getOrElse(throw new ApdlCodeGenerationException(s"No arguments for $args"))
           inner(arguments.tail, acc.replace("@" + id, value))
         }
       }

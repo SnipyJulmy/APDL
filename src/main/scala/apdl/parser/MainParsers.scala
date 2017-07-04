@@ -2,6 +2,8 @@ package apdl.parser
 
 import apdl.ApdlParserException
 
+import cats.implicits._
+
 import scala.Function.tupled
 import scala.util.matching.Regex
 
@@ -45,9 +47,9 @@ class MainParsers extends DefineParsers {
 
   def projectName: Parser[String] = "project_name" ~ "=" ~ "\"" ~> literalString <~ "\"" ^^ { str => str }
 
-  def keyValue: Parser[(String, String)] = {
-    identifier ~ ("=" ~ "\"" ~> literalString <~ "\"") ^^ { case (k ~ v) => (k, v) } |
-    identifier ~ "=" ~ identifier ^^ { case (k ~ _ ~ v) => (k, v) }
+  def keyValue: Parser[KeyValue[String, String]] = {
+    identifier ~ ("=" ~ "\"" ~> literalString <~ "\"") ^^ { case (k ~ v) => KeyValue(k, v) } |
+      identifier ~ "=" ~ identifier ^^ { case (k ~ _ ~ v) => KeyValue(k, v) }
   }
 
   def apdlInput: Parser[ApdlInput] = "@input" ~> identifier ~ identifier ~ apdlParameters ^^ {
@@ -82,17 +84,23 @@ class MainParsers extends DefineParsers {
     def process(ident: String, xs: List[Object]): ApdlDevice = {
       val inputs = xs.filter(_.isInstanceOf[ApdlInput]).map(_.asInstanceOf[ApdlInput])
       val serials = xs.filter(_.isInstanceOf[ApdlSerial]).map(_.asInstanceOf[ApdlSerial])
-      val keyValues = xs.filter(_.isInstanceOf[(String, String)]).map(_.asInstanceOf[(String, String)])
-      val framework = (keyValues find tupled((k, _) => k == "framework")).getOrElse(throw new ApdlParserException(s"No framework specify for $ident"))._2
-      val id = (keyValues find tupled((k, _) => k == "id")).getOrElse(throw new ApdlParserException(s"No id specify for $ident"))._2
-      val port = (keyValues find tupled((k, _) => k == "port")).getOrElse(throw new ApdlParserException(s"No port specify for $ident"))._2
-      val parameters = (keyValues filter tupled((k, _) => k != "id" && k != "framework" && k != "port")).toMap
+      val keyValues = xs.filter(_.isInstanceOf[KeyValue[String, String]]).map(_.asInstanceOf[KeyValue[String, String]])
+      val framework = keyValues.find(kv => kv.key === "framework").getOrElse(throw new ApdlParserException(s"No framework specify for $ident")).value
+      val id = keyValues.find(kv => kv.key === "id").getOrElse(throw new ApdlParserException(s"No id specify for $ident")).value
+      val port = keyValues.find(kv => kv.key === "port").getOrElse(throw new ApdlParserException(s"No port specify for $ident")).value
+      val parameters = keyValues.filter(kv => kv.key =!= "id" && kv.key =!= "framework" && kv.key =!= "port").toKVMap
       ApdlDevice(ident, id, framework, port, inputs, serials, parameters)
     }
 
     "@device" ~> identifier ~ (lb ~> rep1(keyValue | apdlInput | apdlSerial) <~ rb) ^^ { case (ident ~ xs) => process(ident, xs) }
   }
+
+  case class KeyValue[K, V](key: K, value: V)
+  implicit class KeyValues[K,V](keyValues: Seq[KeyValue[K,V]]) {
+    def toKVMap : Map[K,V] = keyValues.map(kv => kv.key -> kv.value).toMap
+  }
 }
+
 
 case class ApdlProject(name: String,
                        devices: List[ApdlDevice],

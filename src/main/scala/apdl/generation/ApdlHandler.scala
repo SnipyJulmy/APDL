@@ -5,6 +5,8 @@ import java.io.{File, PrintWriter, StringWriter}
 import apdl.parser.ApdlProject
 import apdl.{ApdlCodeGenerationException, ApdlConfig}
 
+import scala.Function._
+
 class ApdlHandler(val project: ApdlProject)(implicit config: ApdlConfig) {
 
   private val outputString: StringWriter = new StringWriter()
@@ -12,13 +14,11 @@ class ApdlHandler(val project: ApdlProject)(implicit config: ApdlConfig) {
   generateSource()
 
   def generateSerials(): List[HandlerSerial] = {
-    val serials = project.devices.flatMap(d => d.serials.map(s => (d, s))).groupBy(_._1)
-    serials.map { entry =>
-      val device = entry._1
-      val serials = entry._2.map(_._2)
+    val serials = project.devices.flatMap(d => d.serials.map(s => (d, s))) groupBy tupled ((device,_) => device)
+    serials map tupled { (device,deviceAndSerial) =>
 
       val id = device.name
-      val topics = serials.map(_.inputName)
+      val topics = deviceAndSerial map tupled ((_,serial) => serial.inputName)
       val port = device.port
 
       HandlerSerial(id, topics, port)
