@@ -35,6 +35,11 @@ class ProjectGenerator(project: ApdlProject)(implicit config: ApdlConfig) {
     dockerCompose.mkFile(rootOutputDir)
   }
 
+  def mkLaunchScript() : Unit = {
+    val launcherScript = new ApdlLauncherScript(project)
+    launcherScript.mkFile(rootOutputDir)
+  }
+
   def mkProject(): Unit = {
     Try {
       // Create the root directory
@@ -63,6 +68,9 @@ class ProjectGenerator(project: ApdlProject)(implicit config: ApdlConfig) {
       }
 
       // Generate the launcher script file
+      if(config.generateEcosystem) {
+        mkLaunchScript()
+      }
 
     } match {
       case Failure(exception) => exitOnFailure(exception)
@@ -116,7 +124,12 @@ class ProjectGenerator(project: ApdlProject)(implicit config: ApdlConfig) {
   }
 
 
-  case class PlatformIOIniInfo(boardsId: String, framework: String, platform: String, libForce: Option[String], libDeps: List[String]) {
+  case class PlatformIOIniInfo(boardsId: String,
+                               framework: String,
+                               platform: String,
+                               libForce: Option[String],
+                               uploadPort : String,
+                               libDeps: List[String]) {
     def mkFile(rootDir: File): Unit = {
       if (rootDir.exists())
         if (rootDir.isDirectory) {
@@ -127,6 +140,7 @@ class ProjectGenerator(project: ApdlProject)(implicit config: ApdlConfig) {
           outputStream.append(s"[env:$boardsId]\n")
           outputStream.append(s"platform = $platform\n")
           outputStream.append(s"board = $boardsId\n")
+          outputStream.append(s"upload_port = $uploadPort\n")
           outputStream.append(s"framework = $framework\n")
           if (libDeps.nonEmpty) {
             outputStream.append(
@@ -161,7 +175,8 @@ class ProjectGenerator(project: ApdlProject)(implicit config: ApdlConfig) {
       val boards = getBoards(device.id)
       val board = boards.find(_.id == device.id).getOrElse(throw new ApdlProjectException(s"Can't get info for board : ${device.id}"))
       val platform = board.platform
-      val platformIOIniInfo: PlatformIOIniInfo = PlatformIOIniInfo(device.id, device.framework, platform, None, List("Timer"))
+      val port = device.port
+      val platformIOIniInfo: PlatformIOIniInfo = PlatformIOIniInfo(device.id, device.framework, platform, None, port , List("Timer"))
       generatePlatformIOIni(rootDir, platformIOIniInfo)
 
       // generate the src
