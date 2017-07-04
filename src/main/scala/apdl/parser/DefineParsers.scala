@@ -2,7 +2,6 @@ package apdl.parser
 
 import apdl.ApdlCodeGenerationException
 import apdl.parser.ApdlType.{Id, Str}
-
 import cats.implicits._
 
 import scala.util.matching.Regex
@@ -11,6 +10,7 @@ import scala.util.parsing.combinator.{PackratParsers, RegexParsers}
 class DefineParsers extends TransformDslParser with RegexParsers with PackratParsers {
 
   override protected val whiteSpace: Regex = "[ \t\r\f\n]+".r
+
   override def skipWhitespace: Boolean = true
 
   lazy val defines: PackratParser[List[ApdlDefine]] = rep(apdlDefine)
@@ -34,32 +34,34 @@ class DefineParsers extends TransformDslParser with RegexParsers with PackratPar
   }
 
   lazy val genBody: PackratParser[Gen] = {
-    global ~ setup ~ loop ~ expr ~ (genType?) ^^ { case (g ~ s ~ l ~ e ~ t) => Gen(g, s, l, e, t) }
+    global ~ setup ~ loop ~ expr ~ (genType ?) ^^ { case (g ~ s ~ l ~ e ~ t) => Gen(g, s, l, e, t) }
   }
 
-  lazy val global: PackratParser[String] = "global" ~ "=" ~ "\"" ~> literalString <~ "\"" ^^ { str => str }
-  lazy val setup: PackratParser[String] = "setup" ~ "=" ~ "\"" ~> literalString <~ "\"" ^^ { str => str }
-  lazy val loop: PackratParser[String] = "loop" ~ "=" ~ "\"" ~> literalString <~ "\"" ^^ { str => str }
-  lazy val expr: PackratParser[String] = "expr" ~ "=" ~ "\"" ~> literalString <~ "\"" ^^ { str => str }
+  lazy val global: PackratParser[String] = "global" ~ assignOperator ~ "\"" ~> literalString <~ "\"" ^^ { str => str }
+  lazy val setup: PackratParser[String] = "setup" ~ assignOperator ~ "\"" ~> literalString <~ "\"" ^^ { str => str }
+  lazy val loop: PackratParser[String] = "loop" ~ assignOperator ~ "\"" ~> literalString <~ "\"" ^^ { str => str }
+  lazy val expr: PackratParser[String] = "expr" ~ assignOperator ~ "\"" ~> literalString <~ "\"" ^^ { str => str }
   lazy val literalString: PackratParser[String] = """(\\.|[^\\"])*""".r ^^ { str => str }
-  lazy val genType : PackratParser[ApdlType] = "type" ~ "=" ~> apdlStdType
+  lazy val genType: PackratParser[ApdlType] = "type" ~ assignOperator ~> apdlStdType
+
+  lazy val assignOperator = "="
 
   lazy val defineInput: PackratParser[ApdlDefineInput] = "input" ~> identifier ~ parameters ~ (lb ~> gens <~ rb) ^^ {
     case (defId ~ defParams ~ defGens) => ApdlDefineInput(defId, defParams, defGens)
   }
 
   lazy val apdlType: PackratParser[ApdlType] = str | id | apdlStdType
-  lazy val str: PackratParser[ApdlType.Str.type] = "str" ^^^ ApdlType.Str
-  lazy val id: PackratParser[ApdlType.Id.type] = "id" ^^^ ApdlType.Id
+  lazy val str: PackratParser[ApdlType.Str.type] = ApdlType.Str.toString ^^^ ApdlType.Str
+  lazy val id: PackratParser[ApdlType.Id.type] = ApdlType.Id.toString ^^^ ApdlType.Id
   lazy val apdlStdType: PackratParser[ApdlType] = {
-    "int" ^^^ ApdlType.Int |
-      "float" ^^^ ApdlType.Float |
-      "double" ^^^ ApdlType.Double |
-      "char" ^^^ ApdlType.Char |
-      "byte" ^^^ ApdlType.Byte |
-      "short" ^^^ ApdlType.Short |
-      "bool" ^^^ ApdlType.Bool |
-      "long" ^^^ ApdlType.Long
+    ApdlType.Int.toString ^^^ ApdlType.Int |
+      ApdlType.Float.toString ^^^ ApdlType.Float |
+      ApdlType.Double.toString ^^^ ApdlType.Double |
+      ApdlType.Char.toString ^^^ ApdlType.Char |
+      ApdlType.Byte.toString ^^^ ApdlType.Byte |
+      ApdlType.Short.toString ^^^ ApdlType.Short |
+      ApdlType.Bool.toString ^^^ ApdlType.Bool |
+      ApdlType.Long.toString ^^^ ApdlType.Long
   }
 
   lazy val parameters: PackratParser[List[Parameter]] = rep(parameter)
@@ -74,7 +76,7 @@ class DefineParsers extends TransformDslParser with RegexParsers with PackratPar
 
 case class Inputs(parameters: List[Parameter])
 case class Output(outputType: ApdlType)
-case class Gen(global: String, setup: String, loop: String, expr: String, typ : Option[ApdlType])
+case class Gen(global: String, setup: String, loop: String, expr: String, typ: Option[ApdlType])
 
 sealed trait ApdlDefine {
   def identifier: String = this match {
@@ -120,6 +122,7 @@ object ApdlType {
   case object Byte extends ApdlType
 
   def values: Seq[ApdlType] = Seq(Str, Id, Int, Float, Long, Bool, Double, Short, Char, Byte)
+
   def stdValues: Seq[ApdlType] = Seq(Int, Float, Long, Bool, Double, Short, Char, Byte)
 }
 
