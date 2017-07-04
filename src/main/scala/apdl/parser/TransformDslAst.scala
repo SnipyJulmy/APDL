@@ -2,11 +2,10 @@ package apdl.parser
 
 import apdl.ApdlProjectException
 
-// TODO : refactoring
-
 sealed trait ApdlAst
 sealed trait Expr extends ApdlAst
 
+/* Expression */
 case class Add(left: Expr, right: Expr) extends Expr
 case class Mul(left: Expr, right: Expr) extends Expr
 case class Sub(left: Expr, right: Expr) extends Expr
@@ -17,7 +16,8 @@ case class Symbol(name: String) extends Expr
 case class FunctionCall(funcName: String, args: List[Expr]) extends Expr
 case class ArrayAccess(array: Expr, field: Expr) extends Expr
 case class VarAssignement(target: Expr, value: Expr) extends Expr
-// Bool
+
+/* Boolean expression */
 case class True() extends Expr
 case class False() extends Expr
 case class Or(left: Expr, right: Expr) extends Expr
@@ -86,7 +86,7 @@ sealed trait ArrayInit extends ApdlAst
 case class ArrayInitValue(values: List[Expr]) extends ArrayInit
 case class ArrayInitCapacity(capacity: Literal) extends ArrayInit
 
-// Companion object
+// Utility companion object
 
 object Add {
   def apply(l: AnyVal, r: AnyVal): Add = new Add(Literal(l.toString), Literal(r.toString))

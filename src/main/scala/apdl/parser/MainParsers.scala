@@ -2,6 +2,8 @@ package apdl.parser
 
 import apdl.ApdlParserException
 
+import cats.implicits._
+
 import scala.Function.tupled
 import scala.util.matching.Regex
 
@@ -83,10 +85,10 @@ class MainParsers extends DefineParsers {
       val inputs = xs.filter(_.isInstanceOf[ApdlInput]).map(_.asInstanceOf[ApdlInput])
       val serials = xs.filter(_.isInstanceOf[ApdlSerial]).map(_.asInstanceOf[ApdlSerial])
       val keyValues = xs.filter(_.isInstanceOf[(String, String)]).map(_.asInstanceOf[(String, String)])
-      val framework = (keyValues find tupled((k, _) => k == "framework")).getOrElse(throw new ApdlParserException(s"No framework specify for $ident"))._2
-      val id = (keyValues find tupled((k, _) => k == "id")).getOrElse(throw new ApdlParserException(s"No id specify for $ident"))._2
-      val port = (keyValues find tupled((k, _) => k == "port")).getOrElse(throw new ApdlParserException(s"No port specify for $ident"))._2
-      val parameters = (keyValues filter tupled((k, _) => k != "id" && k != "framework" && k != "port")).toMap
+      val framework = (keyValues find tupled((k, _) => k === "framework")).getOrElse(throw new ApdlParserException(s"No framework specify for $ident"))._2
+      val id = (keyValues find tupled((k, _) => k === "id")).getOrElse(throw new ApdlParserException(s"No id specify for $ident"))._2
+      val port = (keyValues find tupled((k, _) => k === "port")).getOrElse(throw new ApdlParserException(s"No port specify for $ident"))._2
+      val parameters = (keyValues filter tupled((k, _) => k =!= "id" && k =!= "framework" && k =!= "port")).toMap
       ApdlDevice(ident, id, framework, port, inputs, serials, parameters)
     }
 

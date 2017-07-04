@@ -1,10 +1,9 @@
 package apdl
 
+import apdl.ApdlUtils._
 import apdl.generation.{ApdlProjectManager, ProjectGenerator}
 
 import scala.io.Source
-
-import ApdlUtils._
 
 object Main extends App {
 
