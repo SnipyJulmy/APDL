@@ -1,9 +1,9 @@
 package apdl.parser
 
 import apdl.parser.ApdlTimeUnit._
-import apdl.parser.ApdlType.{Id, Num, Str}
+import apdl.parser.ApdlType._
 
-import Function.tupled
+import scala.Function.tupled
 
 /**
   * An code generators which target the apdl language itself
@@ -18,11 +18,11 @@ trait DslApdlBackendGenerators extends TransformApdlBackendGenerators {
          |  ${gens map toApdlCode mkString "\n"}
          |}
        """.stripMargin
-    case ApdlDefineComponent(name, parameters, inputs, outputType, gens) =>
+    case ApdlDefineComponent(name, parameters, inputs, output, gens) =>
       s"""
          |@define component $name ${parameters map toApdlCode mkString " "} {
-         |  @in ${inputs map toApdlCode mkString " "}
-         |  @out ${toApdlCode(outputType)}
+         |  ${toApdlCode(inputs)}
+         |  ${toApdlCode(output)}
          |  ${gens map toApdlCode mkString "\n"}
          |}
        """.stripMargin
@@ -43,10 +43,21 @@ trait DslApdlBackendGenerators extends TransformApdlBackendGenerators {
      """.stripMargin
   }
 
+  def toApdlCode(inputs: Inputs): String = s"@in ${toApdlCode(inputs.parameters)}"
+
+  def toApdlCode(output: Output): String = s"@out ${toApdlCode(output.outputType)}"
+
   def toApdlCode(outputType: ApdlType): String = outputType match {
-    case Num => "num"
     case Str => "str"
     case Id => "id"
+    case Int => "int"
+    case Float => "float"
+    case Long => "long"
+    case Bool => "bool"
+    case Double => "double"
+    case Short => "short"
+    case Char => "char"
+    case Byte => "byte"
   }
 
   def toApdlCode(gen: Gen): String =
@@ -55,6 +66,10 @@ trait DslApdlBackendGenerators extends TransformApdlBackendGenerators {
        |setup = "${gen.setup}"
        |loop = "${gen.loop}"
        |expr = "${gen.expr}"
+       |${gen.typ match {
+      case Some(value) => s"type = ${toApdlCode(value)}"
+      case None => ""
+    }}
      """.stripMargin
 
   def toApdlCode(x: Map[String, Gen]): String = x.map { case (k, v) =>
@@ -72,13 +87,15 @@ trait DslApdlBackendGenerators extends TransformApdlBackendGenerators {
        |@device ${device.name} {
        |  id = ${device.id}
        |  framework = ${device.framework}
+       |  port = "${device.port}"
        |  ${device.inputs map toApdlCode mkString "\n"}
        |  ${device.serials map toApdlCode mkString "\n"}
-       |  ${device.additionalParameters map tupled ((k ,v ) => s"$k = $v") mkString "\n"}
+       |  ${device.additionalParameters map tupled((k, v) => s"$k = $v") mkString "\n"}
        |}
      """.stripMargin
 
-  def toApdlCode(input: ApdlInput): String = s"@input ${input.identifier} ${input.defineInputName} ${input.args mkString " "}"
+  def toApdlCode(input: ApdlInput): String =
+    s"@input ${input.identifier} ${input.defineInputIdentifier} ${input.args mkString " "}"
 
   def toApdlCode(serial: ApdlSerial): String = s"@serial ${serial.inputName} ${toApdlCode(serial.sampling)}"
 

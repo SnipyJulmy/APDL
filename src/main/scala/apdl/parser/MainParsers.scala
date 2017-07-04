@@ -2,6 +2,8 @@ package apdl.parser
 
 import apdl.ApdlParserException
 
+import cats.implicits._
+
 import scala.Function.tupled
 import scala.util.matching.Regex
 
@@ -45,7 +47,10 @@ class MainParsers extends DefineParsers {
 
   def projectName: Parser[String] = "project_name" ~ "=" ~ "\"" ~> literalString <~ "\"" ^^ { str => str }
 
-  def keyValue: Parser[(String, String)] = identifier ~ "=" ~ identifier ^^ { case (k ~ _ ~ v) => (k, v) }
+  def keyValue: Parser[KeyValue[String, String]] = {
+    identifier ~ ("=" ~ "\"" ~> literalString <~ "\"") ^^ { case (k ~ v) => KeyValue(k, v) } |
+      identifier ~ "=" ~ identifier ^^ { case (k ~ _ ~ v) => KeyValue(k, v) }
+  }
 
   def apdlInput: Parser[ApdlInput] = "@input" ~> identifier ~ identifier ~ apdlParameters ^^ {
     case (name ~ typ ~ params) => ApdlInput(name, typ, params)
@@ -79,32 +84,64 @@ class MainParsers extends DefineParsers {
     def process(ident: String, xs: List[Object]): ApdlDevice = {
       val inputs = xs.filter(_.isInstanceOf[ApdlInput]).map(_.asInstanceOf[ApdlInput])
       val serials = xs.filter(_.isInstanceOf[ApdlSerial]).map(_.asInstanceOf[ApdlSerial])
-      val keyValues = xs.filter(_.isInstanceOf[(String, String)]).map(_.asInstanceOf[(String, String)])
-      val framework = (keyValues find tupled((k, _) => k == "framework")).getOrElse(throw new ApdlParserException(s"No framework specify for $ident"))._2
-      val id = (keyValues find tupled((k, _) => k == "id")).getOrElse(throw new ApdlParserException(s"No id specify for $ident"))._2
-      val parameters = (keyValues filter tupled((k, _) => k != "id" && k != "framework")).toMap
-      ApdlDevice(ident, id, framework, inputs, serials, parameters)
+      val keyValues = xs.filter(_.isInstanceOf[KeyValue[String, String]]).map(_.asInstanceOf[KeyValue[String, String]])
+      val framework = keyValues.find(kv => kv.key === "framework").getOrElse(throw new ApdlParserException(s"No framework specify for $ident")).value
+      val id = keyValues.find(kv => kv.key === "id").getOrElse(throw new ApdlParserException(s"No id specify for $ident")).value
+      val port = keyValues.find(kv => kv.key === "port").getOrElse(throw new ApdlParserException(s"No port specify for $ident")).value
+      val parameters = keyValues.filter(kv => kv.key =!= "id" && kv.key =!= "framework" && kv.key =!= "port").toKVMap
+      ApdlDevice(ident, id, framework, port, inputs, serials, parameters)
     }
 
     "@device" ~> identifier ~ (lb ~> rep1(keyValue | apdlInput | apdlSerial) <~ rb) ^^ { case (ident ~ xs) => process(ident, xs) }
   }
+
+  case class KeyValue[K, V](key: K, value: V)
+  implicit class KeyValues[K,V](keyValues: Seq[KeyValue[K,V]]) {
+    def toKVMap : Map[K,V] = keyValues.map(kv => kv.key -> kv.value).toMap
+  }
 }
 
-case class ApdlProject(
-                        name: String,
-                        devices: List[ApdlDevice],
-                        defineInputs: List[ApdlDefineInput],
-                        defineComponents: List[ApdlDefineComponent],
-                        defineTransforms: List[ApdlDefineTransform]
-                      )
 
-case class ApdlDevice(name: String, id: String, framework: String, inputs: List[ApdlInput], serials: List[ApdlSerial], additionalParameters: Map[String, String])
-case class ApdlInput(identifier: String, defineInputName: String, args: List[String])
+case class ApdlProject(name: String,
+                       devices: List[ApdlDevice],
+                       defineInputs: List[ApdlDefineInput],
+                       defineComponents: List[ApdlDefineComponent],
+                       defineTransforms: List[ApdlDefineTransform])
+
+case class ApdlDevice(name: String,
+                      id: String,
+                      framework: String,
+                      port: String,
+                      inputs: List[ApdlInput],
+                      serials: List[ApdlSerial],
+                      additionalParameters: Map[String, String])
+
+case class ApdlInput(identifier: String, defineInputIdentifier: String, args: List[String])
+
 case class ApdlSerial(inputName: String, sampling: ApdlSampling)
 
 sealed trait ApdlSampling
 case object ApdlSamplingUpdate extends ApdlSampling
-case class ApdlSamplingTimer(value: Int, timeUnit: ApdlTimeUnit) extends ApdlSampling
+case class ApdlSamplingTimer(value: Int, timeUnit: ApdlTimeUnit) extends ApdlSampling {
+
+  def ms: Int = timeUnit match {
+    case ApdlTimeUnit.ns => value / 1000
+    case ApdlTimeUnit.ms => value
+    case ApdlTimeUnit.s => value * 1000
+    case ApdlTimeUnit.m => value * 1000 * 60
+    case ApdlTimeUnit.h => value * 1000 * 60 * 60
+    case ApdlTimeUnit.d => value * 1000 * 60 * 60 * 24
+  }
+
+  def s: Int = timeUnit match {
+    case ApdlTimeUnit.ns => value / 1000000
+    case ApdlTimeUnit.ms => value / 1000
+    case ApdlTimeUnit.s => value
+    case ApdlTimeUnit.m => value * 60
+    case ApdlTimeUnit.h => value * 60 * 60
+    case ApdlTimeUnit.d => value * 60 * 60 * 24
+  }
+}
 
 sealed trait ApdlTimeUnit
 object ApdlTimeUnit {

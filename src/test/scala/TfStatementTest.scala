@@ -1,7 +1,6 @@
 import apdl.ApdlParserException
 import apdl.parser._
 import org.scalatest.FlatSpec
-import com.github.SnipyJulmy.scalacolor.ScalaColor._
 
 import scala.util.parsing.input.CharSequenceReader
 
@@ -15,7 +14,7 @@ class TfStatementTest extends FlatSpec {
     val result = parser.parse(tfStatement, new PackratReader(new CharSequenceReader(code))) match {
       case Success(r, _) => r
       case error: NoSuccess =>
-        println(s"can't parse $b -> $error".red)
+        println(s"can't parse $b -> $error")
         fail()
     }
 

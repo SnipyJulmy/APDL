@@ -1,6 +1,5 @@
 import apdl.parser.{DslApdlBackendGenerators, MainParsers}
 import org.scalacheck.Prop._
-import com.github.SnipyJulmy.scalacolor.ScalaColor._
 
 class ProjectTest extends ApdlFlatSpec {
   val apdlProjectGenerators = new ApdlProjectGenerators(1, 1)

@@ -1,7 +1,7 @@
-package apdl
+package apdl.generation
 
+import apdl.ApdlParserException
 import apdl.parser.{ApdlProject, IncludeProcessor, MainParsers}
-import com.github.SnipyJulmy.scalacolor.ScalaColor._
 
 import scala.util.parsing.input.CharSequenceReader
 
@@ -18,6 +18,6 @@ class ApdlProjectManager(val source: String) {
     case Success(result, _) =>
       result
     case n: NoSuccess =>
-      throw new ApdlParserException(s"$n".blue)
+      throw new ApdlParserException(s"$n")
   }
 }

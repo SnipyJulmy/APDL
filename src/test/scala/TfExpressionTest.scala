@@ -66,9 +66,9 @@ class TfExpressionTest extends ApdlFlatSpec {
         val res = parser.parse(tfExpr, new PackratReader(new CharSequenceReader(code)))
         res match {
           case Success(result, next) =>
-            if (!next.atEnd) throw new ApdlParserException
+            if (!next.atEnd) throw new ApdlParserException(s"Not at end of $code")
             println(result)
-          case _: NoSuccess => throw new ApdlParserException
+          case _: NoSuccess => throw new ApdlParserException(s"Could not parse $code")
         }
       }
     }
