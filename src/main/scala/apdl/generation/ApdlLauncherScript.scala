@@ -57,10 +57,13 @@ class ApdlLauncherScript(val project: ApdlProject)(implicit config: ApdlConfig) 
 
     project.devices.foreach { d =>
       val folderName = d.name
-      s"""|cd $folderName
-          |platformio run -t upload
-          |cd ..
-          |""".stripMargin
+      strScript.append {
+        s"""|cd $folderName
+
+            |platformio run -t upload
+            |cd ..
+            |""".stripMargin
+      }
     }
 
     strScript.append {
